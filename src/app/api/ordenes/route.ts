@@ -1,0 +1,317 @@
+import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+import { auth } from "@/lib/auth/auth";
+import prisma from "@/lib/db/prisma";
+import {
+  calcularSemaforo,
+  type OrdenesListResponse,
+  type OrdenesFilters,
+  type CreateOrdenInput,
+  type OrdenListItem,
+  type SemaforoColor,
+} from "@/types/ordenes";
+import { Prisma, EstadoOrden, TipoServicio, Prioridad } from "@prisma/client";
+
+// ============ GET /api/ordenes ============
+// Lista órdenes con filtros, paginación y cálculo de semáforo
+export async function GET(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+
+    // Parsear filtros
+    const filters: OrdenesFilters = {
+      tipoServicio: searchParams.get("tipoServicio") as TipoServicio | undefined,
+      estado: searchParams.get("estado") as EstadoOrden | undefined,
+      prioridad: searchParams.get("prioridad") as Prioridad | undefined,
+      tecnicoId: searchParams.get("tecnicoId") || undefined,
+      clienteId: searchParams.get("clienteId") || undefined,
+      search: searchParams.get("search") || undefined,
+      semaforo: searchParams.get("semaforo") as SemaforoColor | undefined,
+      fechaDesde: searchParams.get("fechaDesde") || undefined,
+      fechaHasta: searchParams.get("fechaHasta") || undefined,
+      page: parseInt(searchParams.get("page") || "1"),
+      pageSize: parseInt(searchParams.get("pageSize") || "20"),
+    };
+
+    // Construir where clause
+    const where: Prisma.OrdenWhereInput = {};
+
+    if (filters.tipoServicio) {
+      where.tipoServicio = filters.tipoServicio;
+    }
+
+    if (filters.estado) {
+      where.estado = filters.estado;
+    }
+
+    if (filters.prioridad) {
+      where.prioridad = filters.prioridad;
+    }
+
+    if (filters.tecnicoId) {
+      where.tecnicoId = filters.tecnicoId;
+    }
+
+    if (filters.clienteId) {
+      where.clienteId = filters.clienteId;
+    }
+
+    if (filters.fechaDesde || filters.fechaHasta) {
+      where.fechaRecepcion = {};
+      if (filters.fechaDesde) {
+        where.fechaRecepcion.gte = new Date(filters.fechaDesde);
+      }
+      if (filters.fechaHasta) {
+        where.fechaRecepcion.lte = new Date(filters.fechaHasta);
+      }
+    }
+
+    // Búsqueda por texto (folio, cliente, equipo)
+    if (filters.search) {
+      where.OR = [
+        { folio: { contains: filters.search, mode: "insensitive" } },
+        { cliente: { nombre: { contains: filters.search, mode: "insensitive" } } },
+        { cliente: { empresa: { contains: filters.search, mode: "insensitive" } } },
+        { marcaEquipo: { contains: filters.search, mode: "insensitive" } },
+        { modeloEquipo: { contains: filters.search, mode: "insensitive" } },
+        { serieEquipo: { contains: filters.search, mode: "insensitive" } },
+      ];
+    }
+
+    // Paginación
+    const page = filters.page || 1;
+    const pageSize = Math.min(filters.pageSize || 20, 100); // Max 100
+    const skip = (page - 1) * pageSize;
+
+    // Ejecutar queries en paralelo
+    const [ordenes, total] = await Promise.all([
+      prisma.orden.findMany({
+        where,
+        include: {
+          cliente: {
+            select: {
+              id: true,
+              nombre: true,
+              empresa: true,
+              telefono: true,
+            },
+          },
+          tecnico: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          _count: {
+            select: {
+              evidencias: true,
+            },
+          },
+        },
+        orderBy: [
+          { prioridad: "desc" },
+          { fechaRecepcion: "desc" },
+        ],
+        skip,
+        take: pageSize,
+      }),
+      prisma.orden.count({ where }),
+    ]);
+
+    // Calcular semáforo para cada orden
+    let ordenesConSemaforo: OrdenListItem[] = ordenes.map((orden) => ({
+      ...orden,
+      semaforo: calcularSemaforo(orden),
+    }));
+
+    // Filtrar por semáforo si se especificó
+    if (filters.semaforo) {
+      ordenesConSemaforo = ordenesConSemaforo.filter(
+        (orden) => orden.semaforo === filters.semaforo
+      );
+    }
+
+    const response: OrdenesListResponse = {
+      ordenes: ordenesConSemaforo,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
+
+    return NextResponse.json(response);
+  } catch (error) {
+    console.error("Error fetching ordenes:", error);
+    return NextResponse.json(
+      { error: "Error al obtener órdenes" },
+      { status: 500 }
+    );
+  }
+}
+
+// ============ POST /api/ordenes ============
+// Crear nueva orden con generación automática de folio
+export async function POST(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    const body: CreateOrdenInput = await request.json();
+
+    // Validaciones básicas
+    if (!body.tipoServicio) {
+      return NextResponse.json(
+        { error: "El tipo de servicio es requerido" },
+        { status: 400 }
+      );
+    }
+
+    if (!body.clienteId && !body.clienteNuevo) {
+      return NextResponse.json(
+        { error: "Debe especificar un cliente existente o crear uno nuevo" },
+        { status: 400 }
+      );
+    }
+
+    if (!body.marcaEquipo || !body.modeloEquipo) {
+      return NextResponse.json(
+        { error: "Marca y modelo del equipo son requeridos" },
+        { status: 400 }
+      );
+    }
+
+    if (!body.fallaReportada) {
+      return NextResponse.json(
+        { error: "La descripción de la falla es requerida" },
+        { status: 400 }
+      );
+    }
+
+    // Usar transacción para asegurar integridad
+    const orden = await prisma.$transaction(async (tx) => {
+      // 1. Obtener o crear cliente
+      let clienteId = body.clienteId;
+
+      if (!clienteId && body.clienteNuevo) {
+        const nuevoCliente = await tx.cliente.create({
+          data: {
+            nombre: body.clienteNuevo.nombre,
+            empresa: body.clienteNuevo.empresa,
+            telefono: body.clienteNuevo.telefono,
+            email: body.clienteNuevo.email,
+            direccion: body.clienteNuevo.direccion,
+            ciudad: body.clienteNuevo.ciudad,
+            esDistribuidor: body.clienteNuevo.esDistribuidor || false,
+            codigoDistribuidor: body.clienteNuevo.codigoDistribuidor,
+          },
+        });
+        clienteId = nuevoCliente.id;
+      }
+
+      // 2. Generar folio automático: OS-2024-0001
+      const year = new Date().getFullYear();
+      const prefix = `OS-${year}-`;
+
+      const ultimaOrden = await tx.orden.findFirst({
+        where: {
+          folio: { startsWith: prefix },
+        },
+        orderBy: { folio: "desc" },
+        select: { folio: true },
+      });
+
+      let nuevoNumero = 1;
+      if (ultimaOrden) {
+        const ultimoNumero = parseInt(ultimaOrden.folio.split("-")[2]);
+        nuevoNumero = ultimoNumero + 1;
+      }
+
+      const folio = `${prefix}${nuevoNumero.toString().padStart(4, "0")}`;
+
+      // 3. Crear la orden
+      const nuevaOrden = await tx.orden.create({
+        data: {
+          folio,
+          tipoServicio: body.tipoServicio,
+          prioridad: body.prioridad || "NORMAL",
+          clienteId: clienteId!,
+          creadoPorId: session.user.id,
+          tecnicoId: body.tecnicoId,
+          // Equipo
+          marcaEquipo: body.marcaEquipo,
+          modeloEquipo: body.modeloEquipo,
+          serieEquipo: body.serieEquipo,
+          condicionEquipo: body.condicionEquipo || "REGULAR",
+          accesorios: body.accesorios || {},
+          // Problema
+          fallaReportada: body.fallaReportada,
+          // Garantía
+          numeroFactura: body.numeroFactura,
+          fechaFactura: body.fechaFactura ? new Date(body.fechaFactura) : null,
+          // REPARE
+          numeroRepare: body.numeroRepare,
+          coordenadasGPS: body.coordenadasGPS,
+          // Fechas
+          fechaPromesa: body.fechaPromesa ? new Date(body.fechaPromesa) : null,
+        },
+        include: {
+          cliente: true,
+          tecnico: {
+            select: { id: true, name: true },
+          },
+          creadoPor: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+
+      // 4. Crear registro en historial
+      await tx.historialEstado.create({
+        data: {
+          ordenId: nuevaOrden.id,
+          estadoAnterior: null,
+          estadoNuevo: "RECIBIDO",
+          usuarioId: session.user.id,
+          notas: "Orden creada",
+        },
+      });
+
+      return nuevaOrden;
+    });
+
+    return NextResponse.json(orden, { status: 201 });
+  } catch (error) {
+    console.error("Error creating orden:", error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        return NextResponse.json(
+          { error: "Ya existe una orden con ese folio" },
+          { status: 409 }
+        );
+      }
+      if (error.code === "P2025") {
+        return NextResponse.json(
+          { error: "Cliente o técnico no encontrado" },
+          { status: 404 }
+        );
+      }
+    }
+
+    return NextResponse.json(
+      { error: "Error al crear la orden" },
+      { status: 500 }
+    );
+  }
+}

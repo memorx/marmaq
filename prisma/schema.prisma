@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============ USUARIOS ============
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  role          Role      @default(TECNICO)
+  activo        Boolean   @default(true)
+
+  // Relaciones
+  ordenesAsignadas  Orden[]   @relation("TecnicoAsignado")
+  ordenesCreadas    Orden[]   @relation("CreadoPor")
+  historialCambios  HistorialEstado[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum Role {
+  SUPER_ADMIN
+  COORD_SERVICIO
+  REFACCIONES
+  TECNICO
+}
+
+// ============ CLIENTES ============
+model Cliente {
+  id            String    @id @default(cuid())
+  nombre        String
+  empresa       String?
+  telefono      String
+  email         String?
+  direccion     String?
+  ciudad        String?
+  notas         String?   @db.Text
+
+  // Para clientes tipo distribuidor (Centro Servicio)
+  esDistribuidor  Boolean   @default(false)
+  codigoDistribuidor String?
+
+  ordenes       Orden[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// ============ ÓRDENES DE SERVICIO ============
+model Orden {
+  id              String        @id @default(cuid())
+  folio           String        @unique  // Ej: "OS-2024-0001"
+
+  // Tipo y estado
+  tipoServicio    TipoServicio
+  estado          EstadoOrden   @default(RECIBIDO)
+  prioridad       Prioridad     @default(NORMAL)
+
+  // Relaciones principales
+  clienteId       String
+  cliente         Cliente       @relation(fields: [clienteId], references: [id])
+
+  tecnicoId       String?
+  tecnico         User?         @relation("TecnicoAsignado", fields: [tecnicoId], references: [id])
+
+  creadoPorId     String
+  creadoPor       User          @relation("CreadoPor", fields: [creadoPorId], references: [id])
+
+  // Datos del equipo
+  marcaEquipo     String        // Torrey, Imbera, Ojeda, Migsa, etc.
+  modeloEquipo    String
+  serieEquipo     String?
+
+  // Checklist de accesorios TORREY (JSON)
+  accesorios      Json?         // {plato: true, eliminador: false, antena: true, ...}
+  condicionEquipo CondicionEquipo @default(REGULAR)
+
+  // Descripción del problema
+  fallaReportada  String        @db.Text
+  diagnostico     String?       @db.Text
+  notasTecnico    String?       @db.Text  // Las notas amarillas del formato TORREY
+
+  // Para garantías
+  numeroFactura   String?
+  fechaFactura    DateTime?
+
+  // Para REPARE (refrigeración)
+  numeroRepare    String?
+  coordenadasGPS  String?
+
+  // Fechas importantes
+  fechaRecepcion    DateTime    @default(now())
+  fechaPromesa      DateTime?
+  fechaReparacion   DateTime?
+  fechaEntrega      DateTime?
+
+  // Costo (para servicios Por Cobrar)
+  cotizacion      Decimal?      @db.Decimal(10, 2)
+  cotizacionAprobada Boolean    @default(false)
+
+  // Relaciones
+  evidencias      Evidencia[]
+  materialesUsados MaterialUsado[]
+  historial       HistorialEstado[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([estado])
+  @@index([tipoServicio])
+  @@index([clienteId])
+  @@index([tecnicoId])
+  @@index([fechaRecepcion])
+}
+
+enum TipoServicio {
+  GARANTIA          // Garantía de fábrica
+  CENTRO_SERVICIO   // Servicio para otros distribuidores
+  POR_COBRAR        // Servicio pagado por cliente
+  REPARE            // Refrigeración vía call center
+}
+
+enum EstadoOrden {
+  RECIBIDO
+  EN_DIAGNOSTICO
+  ESPERA_REFACCIONES
+  COTIZACION_PENDIENTE  // Para Por Cobrar
+  EN_REPARACION
+  REPARADO
+  LISTO_ENTREGA
+  ENTREGADO
+  CANCELADO
+}
+
+enum Prioridad {
+  BAJA
+  NORMAL
+  ALTA
+  URGENTE
+}
+
+enum CondicionEquipo {
+  BUENA
+  REGULAR
+  MALA
+}
+
+// ============ EVIDENCIAS FOTOGRÁFICAS ============
+model Evidencia {
+  id          String          @id @default(cuid())
+  ordenId     String
+  orden       Orden           @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+
+  tipo        TipoEvidencia
+  url         String          // URL de Supabase Storage
+  filename    String
+  descripcion String?
+
+  createdAt   DateTime        @default(now())
+
+  @@index([ordenId])
+  @@index([tipo])
+}
+
+enum TipoEvidencia {
+  RECEPCION       // Foto al recibir
+  DIAGNOSTICO     // Foto del problema
+  REPARACION      // Foto del proceso
+  ENTREGA         // Foto al entregar
+  FACTURA         // Foto de factura (para garantías)
+  OTRO
+}
+
+// ============ INVENTARIO DE MATERIALES ============
+model Material {
+  id            String    @id @default(cuid())
+  sku           String    @unique
+  nombre        String
+  descripcion   String?
+  categoria     String    // Refacciones, Consumibles, Herramientas
+
+  stockActual   Int       @default(0)
+  stockMinimo   Int       @default(5)
+
+  precioCompra  Decimal?  @db.Decimal(10, 2)
+  precioVenta   Decimal?  @db.Decimal(10, 2)
+
+  activo        Boolean   @default(true)
+
+  usos          MaterialUsado[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([categoria])
+  @@index([stockActual])
+}
+
+model MaterialUsado {
+  id          String    @id @default(cuid())
+  ordenId     String
+  orden       Orden     @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+
+  materialId  String
+  material    Material  @relation(fields: [materialId], references: [id])
+
+  cantidad    Int
+  precioUnitario Decimal? @db.Decimal(10, 2)
+
+  createdAt   DateTime  @default(now())
+
+  @@index([ordenId])
+  @@index([materialId])
+}
+
+// ============ HISTORIAL DE ESTADOS ============
+model HistorialEstado {
+  id          String      @id @default(cuid())
+  ordenId     String
+  orden       Orden       @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+
+  estadoAnterior  EstadoOrden?
+  estadoNuevo     EstadoOrden
+
+  usuarioId   String
+  usuario     User        @relation(fields: [usuarioId], references: [id])
+
+  notas       String?
+
+  createdAt   DateTime    @default(now())
+
+  @@index([ordenId])
+}
+
+// ============ CONFIGURACIÓN DEL SISTEMA ============
+model Configuracion {
+  id          String    @id @default(cuid())
+  clave       String    @unique
+  valor       String
+  descripcion String?
+
+  updatedAt   DateTime  @updatedAt
+}
