@@ -1,0 +1,1 @@
+export { ClienteModal } from "./ClienteModal";
