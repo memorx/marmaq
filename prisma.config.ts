@@ -10,9 +10,7 @@ export default defineConfig({
     seed: "npx tsx prisma/seed.ts",
   },
   datasource: {
-    // URL con pooler para queries normales
-    url: process.env["DATABASE_URL"],
-    // URL directa para migraciones y schema push
-    directUrl: process.env["DIRECT_URL"],
+    // URL directa para migraciones y schema push (Prisma 7 usa esta para CLI)
+    url: process.env["DIRECT_URL"],
   },
 });

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Badge } from "@/components/ui";
-import { EvidenciaUpload } from "@/components/ordenes";
+import { EvidenciaUpload, EditOrdenModal } from "@/components/ordenes";
 import {
   SEMAFORO_CONFIG,
   STATUS_LABELS,
@@ -217,6 +217,7 @@ export default function OrdenDetallePage({ params }: PageProps) {
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [nuevaNota, setNuevaNota] = useState("");
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   useEffect(() => {
     async function fetchOrden() {
@@ -326,7 +327,7 @@ export default function OrdenDetallePage({ params }: PageProps) {
         </div>
         <Button
           variant="outline"
-          onClick={() => router.push(`/ordenes/${orden.id}/editar`)}
+          onClick={() => setEditModalOpen(true)}
           className="flex items-center gap-2"
         >
           <Edit className="w-4 h-4" />
@@ -722,6 +723,16 @@ export default function OrdenDetallePage({ params }: PageProps) {
           )}
         </div>
       </div>
+
+      {/* Modal de Edición */}
+      <EditOrdenModal
+        orden={orden}
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        onSave={(ordenActualizada) => {
+          setOrden({ ...ordenActualizada, semaforo: orden.semaforo });
+        }}
+      />
     </div>
   );
 }

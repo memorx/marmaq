@@ -1,34 +1,28 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Lazy initialization - solo crear el cliente cuando se use
-function getPrismaClient(): PrismaClient {
-  if (globalForPrisma.prisma) {
-    return globalForPrisma.prisma;
+function createPrismaClient(): PrismaClient {
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    throw new Error("DATABASE_URL environment variable is not set");
   }
 
-  const client = new PrismaClient();
+  const pool = new Pool({ connectionString });
+  const adapter = new PrismaPg(pool);
 
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = client;
-  }
-
-  return client;
+  return new PrismaClient({ adapter });
 }
 
-// Exportar un proxy que inicializa Prisma solo cuando se accede
-export const prisma = new Proxy({} as PrismaClient, {
-  get(_target, prop) {
-    const client = getPrismaClient();
-    const value = client[prop as keyof PrismaClient];
-    if (typeof value === "function") {
-      return value.bind(client);
-    }
-    return value;
-  },
-});
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+}
 
 export default prisma;
