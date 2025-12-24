@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 4. Crear registro en historial
+      // 4. Crear registro en historial de estados
       await tx.historialEstado.create({
         data: {
           ordenId: nuevaOrden.id,
@@ -284,6 +284,21 @@ export async function POST(request: NextRequest) {
           estadoNuevo: "RECIBIDO",
           usuarioId: session.user.id,
           notas: "Orden creada",
+        },
+      });
+
+      // 5. Crear registro en historial completo de orden
+      await tx.historialOrden.create({
+        data: {
+          ordenId: nuevaOrden.id,
+          usuarioId: session.user.id,
+          accion: "ORDEN_CREADA",
+          detalles: {
+            folio: nuevaOrden.folio,
+            tipoServicio: nuevaOrden.tipoServicio,
+            cliente: body.clienteNuevo?.nombre || "Cliente existente",
+            equipo: `${nuevaOrden.marcaEquipo} ${nuevaOrden.modeloEquipo}`,
+          },
         },
       });
 

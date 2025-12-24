@@ -155,48 +155,49 @@ export default function ClientesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#092139]">Clientes</h1>
-          <p className="text-gray-500">
-            {pagination.total} cliente{pagination.total !== 1 ? "s" : ""} registrado{pagination.total !== 1 ? "s" : ""}
+    <div className="space-y-4 lg:space-y-6">
+      {/* Header - Mobile optimizado */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl lg:text-2xl font-bold text-[#092139]">Clientes</h1>
+          <p className="text-gray-500 text-xs lg:text-sm">
+            {pagination.total} cliente{pagination.total !== 1 ? "s" : ""}
           </p>
         </div>
-        <Button onClick={handleCrearCliente} className="flex items-center gap-2">
+        <Button onClick={handleCrearCliente} size="sm" className="flex items-center gap-2 flex-shrink-0">
           <Plus className="w-4 h-4" />
-          Nuevo Cliente
+          <span className="hidden sm:inline">Nuevo Cliente</span>
+          <span className="sm:hidden">Nuevo</span>
         </Button>
       </div>
 
-      {/* Filtros */}
-      <Card className="p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
+      {/* Filtros - Stack en móvil */}
+      <Card className="p-3 lg:p-4">
+        <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-row sm:gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               type="text"
-              placeholder="Buscar por nombre, empresa, teléfono o email..."
+              placeholder="Buscar cliente..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
+              className="pl-10 py-3 sm:py-2"
             />
           </div>
 
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-400" />
+            <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <select
               value={filterDistribuidor}
               onChange={(e) => {
                 setFilterDistribuidor(e.target.value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
+              className="flex-1 sm:flex-none px-3 py-3 sm:py-2 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
             >
-              <option value="all">Todos los clientes</option>
-              <option value="true">Solo distribuidores</option>
-              <option value="false">Solo clientes finales</option>
+              <option value="all">Todos</option>
+              <option value="true">Distribuidores</option>
+              <option value="false">Clientes finales</option>
             </select>
           </div>
         </div>
@@ -343,15 +344,13 @@ export default function ClientesPage() {
         </div>
       )}
 
-      {/* Paginación */}
+      {/* Paginación - responsive */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">
-            Mostrando {(pagination.page - 1) * pagination.pageSize + 1} -{" "}
-            {Math.min(pagination.page * pagination.pageSize, pagination.total)}{" "}
-            de {pagination.total}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs sm:text-sm text-gray-500 order-2 sm:order-1">
+            {(pagination.page - 1) * pagination.pageSize + 1}-{Math.min(pagination.page * pagination.pageSize, pagination.total)} de {pagination.total}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 order-1 sm:order-2 w-full sm:w-auto justify-center sm:justify-end">
             <Button
               variant="outline"
               size="sm"
@@ -359,11 +358,12 @@ export default function ClientesPage() {
                 setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
               }
               disabled={pagination.page === 1}
+              className="flex-1 sm:flex-none"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <span className="text-sm text-gray-600">
-              Página {pagination.page} de {pagination.totalPages}
+            <span className="text-sm text-gray-600 px-2 whitespace-nowrap">
+              {pagination.page} / {pagination.totalPages}
             </span>
             <Button
               variant="outline"
@@ -372,6 +372,7 @@ export default function ClientesPage() {
                 setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
               }
               disabled={pagination.page === pagination.totalPages}
+              className="flex-1 sm:flex-none"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>

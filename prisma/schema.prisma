@@ -19,6 +19,7 @@ model User {
   ordenesAsignadas  Orden[]   @relation("TecnicoAsignado")
   ordenesCreadas    Orden[]   @relation("CreadoPor")
   historialCambios  HistorialEstado[]
+  historialOrdenes  HistorialOrden[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -47,6 +48,7 @@ model Cliente {
   codigoDistribuidor String?
 
   ordenes       Orden[]
+  notificacionesWA NotificacionWhatsApp[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -104,10 +106,16 @@ model Orden {
   cotizacion      Decimal?      @db.Decimal(10, 2)
   cotizacionAprobada Boolean    @default(false)
 
+  // Firma del cliente al recibir
+  firmaClienteUrl   String?       // URL de la imagen en Supabase Storage
+  firmaFecha        DateTime?     // Fecha/hora de la firma
+
   // Relaciones
   evidencias      Evidencia[]
   materialesUsados MaterialUsado[]
   historial       HistorialEstado[]
+  historialOrden  HistorialOrden[]
+  notificacionesWA NotificacionWhatsApp[]
 
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -238,11 +246,100 @@ model HistorialEstado {
   @@index([ordenId])
 }
 
+// ============ HISTORIAL COMPLETO DE ORDEN ============
+model HistorialOrden {
+  id          String      @id @default(cuid())
+  ordenId     String
+  orden       Orden       @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+
+  usuarioId   String
+  usuario     User        @relation(fields: [usuarioId], references: [id])
+
+  fecha       DateTime    @default(now())
+  accion      AccionHistorial
+  detalles    Json?       // {campo: "estado", anterior: "RECIBIDO", nuevo: "EN_DIAGNOSTICO"}
+
+  @@index([ordenId])
+  @@index([fecha])
+}
+
+enum AccionHistorial {
+  ORDEN_CREADA
+  ESTADO_CAMBIADO
+  ORDEN_EDITADA
+  EVIDENCIA_AGREGADA
+  MATERIAL_AGREGADO
+  TECNICO_ASIGNADO
+  COTIZACION_ENVIADA
+  COTIZACION_APROBADA
+  COTIZACION_RECHAZADA
+  NOTA_AGREGADA
+}
+
+// ============ NOTIFICACIONES WHATSAPP ============
+model NotificacionWhatsApp {
+  id          String                @id @default(cuid())
+
+  ordenId     String
+  orden       Orden                 @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+
+  clienteId   String
+  cliente     Cliente               @relation(fields: [clienteId], references: [id])
+
+  telefono    String                // Número de destino
+  tipo        TipoNotificacionWA
+  mensaje     String                @db.Text
+
+  estado      EstadoNotificacionWA  @default(PENDIENTE)
+  errorMsg    String?               // Mensaje de error si falló
+
+  // Para integración futura con WhatsApp API
+  providerMessageId String?         // ID del mensaje en Twilio/WhatsApp API
+
+  fechaCreacion DateTime            @default(now())
+  fechaEnvio    DateTime?
+
+  @@index([ordenId])
+  @@index([clienteId])
+  @@index([estado])
+  @@index([fechaCreacion])
+}
+
+enum TipoNotificacionWA {
+  RECIBIDO          // Equipo recibido
+  EN_REPARACION     // En proceso de reparación
+  COTIZACION        // Cotización enviada
+  LISTO_ENTREGA     // Listo para recoger
+  ENTREGADO         // Agradecimiento post-entrega
+  RECORDATORIO      // Recordatorio de recoger
+  PERSONALIZADO     // Mensaje personalizado
+}
+
+enum EstadoNotificacionWA {
+  PENDIENTE         // Creado, pendiente de enviar
+  ENVIADO           // Enviado exitosamente
+  ENTREGADO         // Confirmado recibido (si API lo soporta)
+  LEIDO             // Confirmado leído (si API lo soporta)
+  ERROR             // Error al enviar
+}
+
+// ============ PLANTILLAS DE MENSAJES ============
+model PlantillaMensaje {
+  id          String                @id @default(cuid())
+  tipo        TipoNotificacionWA    @unique
+  nombre      String
+  mensaje     String                @db.Text  // Usa variables: {nombre}, {folio}, {modelo}, etc.
+  activa      Boolean               @default(true)
+
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+}
+
 // ============ CONFIGURACIÓN DEL SISTEMA ============
 model Configuracion {
   id          String    @id @default(cuid())
   clave       String    @unique
-  valor       String
+  valor       String    @db.Text
   descripcion String?
 
   updatedAt   DateTime  @updatedAt

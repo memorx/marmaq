@@ -235,13 +235,13 @@ export function EvidenciaUpload({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Camera className="w-5 h-5 text-gray-500" />
-          <h3 className="font-medium text-gray-900">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Camera className="w-5 h-5 text-gray-500 flex-shrink-0" />
+          <h3 className="font-medium text-gray-900 text-sm lg:text-base truncate">
             Fotos de {TIPO_LABELS[tipo]}
           </h3>
-          <span className="text-sm text-gray-500">
+          <span className="text-xs lg:text-sm text-gray-500 flex-shrink-0">
             ({totalFiles}/{maxFiles})
           </span>
         </div>
@@ -251,6 +251,7 @@ export function EvidenciaUpload({
             onClick={uploadFiles}
             isLoading={uploading}
             disabled={uploading}
+            className="flex-shrink-0"
           >
             <Upload className="w-4 h-4 mr-1" />
             Subir {previews.length}
@@ -258,20 +259,10 @@ export function EvidenciaUpload({
         )}
       </div>
 
-      {/* Zona de Drop */}
+      {/* Botones de acción - Móvil primero */}
       {canAddMore && !disabled && (
-        <div
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
-            dragActive
-              ? "border-[#31A7D4] bg-[#31A7D4]/10"
-              : "border-gray-300 hover:border-[#31A7D4] hover:bg-[#31A7D4]/5"
-          }`}
-          onClick={() => fileInputRef.current?.click()}
-        >
+        <div className="flex flex-col sm:flex-row gap-2">
+          {/* Inputs ocultos */}
           <input
             ref={fileInputRef}
             type="file"
@@ -280,26 +271,6 @@ export function EvidenciaUpload({
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
           />
-
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-              <ImagePlus className="w-6 h-6 text-gray-400" />
-            </div>
-            <div>
-              <p className="text-gray-600 font-medium">
-                Arrastra fotos aquí
-              </p>
-              <p className="text-sm text-gray-400">
-                o haz clic para seleccionar
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Botón de cámara para móvil */}
-      {canAddMore && !disabled && (
-        <div className="flex gap-2">
           <input
             ref={cameraInputRef}
             type="file"
@@ -308,15 +279,44 @@ export function EvidenciaUpload({
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
           />
-          <Button
-            variant="outline"
-            size="sm"
+
+          {/* Botón GRANDE de cámara - Principal en móvil */}
+          <button
             onClick={() => cameraInputRef.current?.click()}
-            className="flex-1 sm:flex-none"
+            className="flex-1 flex items-center justify-center gap-3 py-4 sm:py-3 bg-[#31A7D4] text-white rounded-xl font-medium active:scale-[0.98] transition-transform shadow-sm"
           >
-            <Camera className="w-4 h-4 mr-2" />
-            Tomar foto
-          </Button>
+            <Camera className="w-6 h-6 sm:w-5 sm:h-5" />
+            <span className="text-base sm:text-sm">Tomar Foto</span>
+          </button>
+
+          {/* Botón de galería */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-4 sm:py-3 px-4 border-2 border-gray-300 text-gray-700 rounded-xl font-medium active:scale-[0.98] transition-transform hover:border-[#31A7D4] hover:text-[#31A7D4]"
+          >
+            <ImagePlus className="w-5 h-5" />
+            <span className="text-sm">Galería</span>
+          </button>
+        </div>
+      )}
+
+      {/* Zona de Drop - Solo desktop */}
+      {canAddMore && !disabled && (
+        <div
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          className={`hidden lg:block border-2 border-dashed rounded-xl p-4 text-center transition-all cursor-pointer ${
+            dragActive
+              ? "border-[#31A7D4] bg-[#31A7D4]/10"
+              : "border-gray-200 hover:border-[#31A7D4] hover:bg-[#31A7D4]/5"
+          }`}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <p className="text-sm text-gray-500">
+            También puedes arrastrar fotos aquí
+          </p>
         </div>
       )}
 
@@ -332,11 +332,11 @@ export function EvidenciaUpload({
 
       {/* Grid de previews pendientes */}
       {previews.length > 0 && (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 lg:gap-3">
           {previews.map((preview, index) => (
             <div
               key={preview.preview}
-              className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 group"
+              className="relative aspect-square rounded-lg overflow-hidden bg-gray-100"
             >
               <Image
                 src={preview.preview}
@@ -355,7 +355,7 @@ export function EvidenciaUpload({
                     ? "bg-green-500/50"
                     : preview.status === "error"
                     ? "bg-red-500/50"
-                    : "bg-black/0 group-hover:bg-black/30"
+                    : ""
                 }`}
               >
                 {preview.status === "uploading" && (
@@ -367,22 +367,24 @@ export function EvidenciaUpload({
                 {preview.status === "error" && (
                   <AlertCircle className="w-6 h-6 text-white" />
                 )}
-                {preview.status === "pending" && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removePreview(index);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 bg-red-500 rounded-full text-white transition-opacity"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
               </div>
+
+              {/* Botón eliminar - siempre visible en móvil */}
+              {preview.status === "pending" && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removePreview(index);
+                  }}
+                  className="absolute top-1 right-1 p-1.5 bg-red-500 rounded-full text-white shadow-lg active:scale-90 transition-transform"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
 
               {/* Badge "Nuevo" */}
               {preview.status === "pending" && (
-                <span className="absolute top-1 left-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded">
+                <span className="absolute bottom-1 left-1 bg-orange-500 text-white text-[10px] lg:text-xs px-1.5 py-0.5 rounded shadow">
                   Nuevo
                 </span>
               )}
@@ -393,11 +395,11 @@ export function EvidenciaUpload({
 
       {/* Grid de evidencias existentes */}
       {evidencias.length > 0 && (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 lg:gap-3">
           {evidencias.map((evidencia) => (
             <div
               key={evidencia.id}
-              className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 group"
+              className="relative aspect-square rounded-lg overflow-hidden bg-gray-100"
             >
               <Image
                 src={evidencia.url}
@@ -408,16 +410,16 @@ export function EvidenciaUpload({
               />
 
               {/* Label del tipo */}
-              <span className="absolute bottom-1 left-1 right-1 text-xs bg-black/50 text-white px-1.5 py-0.5 rounded text-center truncate">
+              <span className="absolute bottom-1 left-1 right-1 text-[10px] lg:text-xs bg-black/60 text-white px-1 lg:px-1.5 py-0.5 rounded text-center truncate">
                 {TIPO_LABELS[evidencia.tipo]}
               </span>
 
-              {/* Botón eliminar */}
+              {/* Botón eliminar - siempre visible en móvil */}
               {ordenId && !disabled && (
                 <button
                   onClick={() => deleteEvidencia(evidencia.id)}
                   disabled={deletingId === evidencia.id}
-                  className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1.5 bg-red-500 rounded-full text-white transition-opacity disabled:opacity-50"
+                  className="absolute top-1 right-1 p-1.5 bg-red-500/90 rounded-full text-white shadow-lg active:scale-90 transition-transform disabled:opacity-50"
                 >
                   {deletingId === evidencia.id ? (
                     <Loader2 className="w-3 h-3 animate-spin" />

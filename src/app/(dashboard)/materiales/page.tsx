@@ -214,45 +214,47 @@ export default function MaterialesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#092139]">Materiales</h1>
-          <p className="text-gray-500">
-            {pagination.total} material{pagination.total !== 1 ? "es" : ""} en inventario
+    <div className="space-y-4 lg:space-y-6">
+      {/* Header - Mobile optimizado */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl lg:text-2xl font-bold text-[#092139]">Materiales</h1>
+          <p className="text-gray-500 text-xs lg:text-sm">
+            {pagination.total} material{pagination.total !== 1 ? "es" : ""}
           </p>
         </div>
-        <Button onClick={handleCrearMaterial} className="flex items-center gap-2">
+        <Button onClick={handleCrearMaterial} size="sm" className="flex items-center gap-2 flex-shrink-0">
           <Plus className="w-4 h-4" />
-          Nuevo Material
+          <span className="hidden sm:inline">Nuevo Material</span>
+          <span className="sm:hidden">Nuevo</span>
         </Button>
       </div>
 
-      {/* Filtros */}
-      <Card className="p-4">
-        <div className="flex flex-col lg:flex-row gap-4">
+      {/* Filtros - Stack en móvil */}
+      <Card className="p-3 lg:p-4">
+        <div className="space-y-3 lg:space-y-0 lg:flex lg:flex-row lg:gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               type="text"
-              placeholder="Buscar por SKU, nombre o descripción..."
+              placeholder="Buscar SKU, nombre..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
+              className="pl-10 py-3 lg:py-2"
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-400" />
+          {/* Fila de filtros */}
+          <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+            <div className="flex items-center gap-2 flex-1 sm:flex-none">
+              <Filter className="w-4 h-4 text-gray-400 flex-shrink-0 hidden sm:block" />
               <select
                 value={filterCategoria}
                 onChange={(e) => {
                   setFilterCategoria(e.target.value);
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
-                className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
+                className="flex-1 sm:flex-none px-3 py-3 lg:py-2 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
               >
                 {CATEGORIAS.map((cat) => (
                   <option key={cat.value} value={cat.value}>
@@ -262,15 +264,15 @@ export default function MaterialesPage() {
               </select>
             </div>
 
-            <div className="flex items-center gap-2">
-              <ArrowUpDown className="w-4 h-4 text-gray-400" />
+            <div className="flex items-center gap-2 flex-1 sm:flex-none">
+              <ArrowUpDown className="w-4 h-4 text-gray-400 flex-shrink-0 hidden sm:block" />
               <select
                 value={ordenar}
                 onChange={(e) => {
                   setOrdenar(e.target.value);
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
-                className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
+                className="flex-1 sm:flex-none px-3 py-3 lg:py-2 rounded-lg border border-gray-300 bg-white text-sm focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
               >
                 {ORDENAR_POR.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -280,7 +282,7 @@ export default function MaterialesPage() {
               </select>
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-2 cursor-pointer p-2 -m-1 rounded-lg active:bg-gray-100">
               <input
                 type="checkbox"
                 checked={filterStockBajo}
@@ -288,11 +290,12 @@ export default function MaterialesPage() {
                   setFilterStockBajo(e.target.checked);
                   setPagination((prev) => ({ ...prev, page: 1 }));
                 }}
-                className="w-4 h-4 text-[#31A7D4] border-gray-300 rounded focus:ring-[#31A7D4]"
+                className="w-5 h-5 lg:w-4 lg:h-4 text-[#31A7D4] border-gray-300 rounded focus:ring-[#31A7D4]"
               />
-              <span className="text-sm text-gray-700 flex items-center gap-1">
+              <span className="text-sm text-gray-700 flex items-center gap-1 whitespace-nowrap">
                 <AlertTriangle className="w-4 h-4 text-amber-500" />
-                Solo stock bajo
+                <span className="hidden sm:inline">Solo stock bajo</span>
+                <span className="sm:hidden">Bajo</span>
               </span>
             </label>
           </div>
@@ -450,15 +453,13 @@ export default function MaterialesPage() {
         </div>
       )}
 
-      {/* Paginación */}
+      {/* Paginación - responsive */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">
-            Mostrando {(pagination.page - 1) * pagination.pageSize + 1} -{" "}
-            {Math.min(pagination.page * pagination.pageSize, pagination.total)}{" "}
-            de {pagination.total}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs sm:text-sm text-gray-500 order-2 sm:order-1">
+            {(pagination.page - 1) * pagination.pageSize + 1}-{Math.min(pagination.page * pagination.pageSize, pagination.total)} de {pagination.total}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 order-1 sm:order-2 w-full sm:w-auto justify-center sm:justify-end">
             <Button
               variant="outline"
               size="sm"
@@ -466,11 +467,12 @@ export default function MaterialesPage() {
                 setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
               }
               disabled={pagination.page === 1}
+              className="flex-1 sm:flex-none"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <span className="text-sm text-gray-600">
-              Página {pagination.page} de {pagination.totalPages}
+            <span className="text-sm text-gray-600 px-2 whitespace-nowrap">
+              {pagination.page} / {pagination.totalPages}
             </span>
             <Button
               variant="outline"
@@ -479,6 +481,7 @@ export default function MaterialesPage() {
                 setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
               }
               disabled={pagination.page === pagination.totalPages}
+              className="flex-1 sm:flex-none"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>

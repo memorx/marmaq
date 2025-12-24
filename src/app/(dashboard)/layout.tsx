@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth";
-import { Sidebar } from "@/components/layout";
+import { DashboardLayoutClient } from "./layout-client";
 
 export default async function DashboardLayout({
   children,
@@ -14,17 +14,15 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar
-        user={{
-          name: session.user.name || "Usuario",
-          email: session.user.email || "",
-          role: session.user.role || "TECNICO",
-        }}
-      />
-      <main className="ml-[240px]">
-        {children}
-      </main>
-    </div>
+    <DashboardLayoutClient
+      user={{
+        id: session.user.id || "",
+        name: session.user.name || "Usuario",
+        email: session.user.email || "",
+        role: session.user.role || "TECNICO",
+      }}
+    >
+      {children}
+    </DashboardLayoutClient>
   );
 }

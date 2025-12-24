@@ -159,6 +159,20 @@ export async function POST(
       evidenciasCreadas.push(evidencia);
     }
 
+    // Registrar en historial completo de orden
+    await prisma.historialOrden.create({
+      data: {
+        ordenId,
+        usuarioId: session.user.id,
+        accion: "EVIDENCIA_AGREGADA",
+        detalles: {
+          tipo,
+          cantidad: evidenciasCreadas.length,
+          archivos: evidenciasCreadas.map((e) => e.filename),
+        },
+      },
+    });
+
     return NextResponse.json(
       {
         message: `${evidenciasCreadas.length} evidencia(s) subida(s) exitosamente`,

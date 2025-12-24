@@ -8,7 +8,7 @@ import {
   calcularSemaforo,
   type UpdateOrdenInput,
 } from "@/types/ordenes";
-import { Prisma, EstadoOrden } from "@prisma/client";
+import { Prisma, EstadoOrden, AccionHistorial } from "@prisma/client";
 
 type RouteParams = Promise<{ id: string }>;
 
@@ -98,10 +98,19 @@ export async function PATCH(
     const { id } = await params;
     const body: UpdateOrdenInput = await request.json();
 
-    // Verificar que la orden existe
+    // Verificar que la orden existe y obtener valores actuales para comparar
     const ordenActual = await prisma.orden.findUnique({
       where: { id },
-      select: { id: true, estado: true },
+      select: {
+        id: true,
+        estado: true,
+        tecnicoId: true,
+        cotizacion: true,
+        cotizacionAprobada: true,
+        diagnostico: true,
+        notasTecnico: true,
+        prioridad: true,
+      },
     });
 
     if (!ordenActual) {
@@ -210,6 +219,11 @@ export async function PATCH(
       }
     }
 
+    // Detectar tipos de cambios para el historial
+    const tecnicoCambiado = body.tecnicoId !== undefined && body.tecnicoId !== ordenActual.tecnicoId;
+    const cotizacionEnviada = body.cotizacion !== undefined && ordenActual.cotizacion === null;
+    const cotizacionAprobadaCambiada = body.cotizacionAprobada !== undefined && body.cotizacionAprobada !== ordenActual.cotizacionAprobada;
+
     // Ejecutar actualización con historial en transacción
     const ordenActualizada = await prisma.$transaction(async (tx) => {
       // Actualizar orden
@@ -230,7 +244,7 @@ export async function PATCH(
         },
       });
 
-      // Registrar cambio de estado en historial
+      // Registrar cambio de estado en historial de estados
       if (estadoCambiado && body.estado) {
         await tx.historialEstado.create({
           data: {
@@ -239,6 +253,101 @@ export async function PATCH(
             estadoNuevo: body.estado,
             usuarioId: session.user.id,
             notas: getNotaCambioEstado(ordenActual.estado, body.estado),
+          },
+        });
+
+        // También registrar en historial completo de orden
+        await tx.historialOrden.create({
+          data: {
+            ordenId: id,
+            usuarioId: session.user.id,
+            accion: "ESTADO_CAMBIADO",
+            detalles: {
+              estadoAnterior: ordenActual.estado,
+              estadoNuevo: body.estado,
+            },
+          },
+        });
+      }
+
+      // Registrar asignación de técnico
+      if (tecnicoCambiado) {
+        await tx.historialOrden.create({
+          data: {
+            ordenId: id,
+            usuarioId: session.user.id,
+            accion: "TECNICO_ASIGNADO",
+            detalles: {
+              tecnicoAnterior: ordenActual.tecnicoId,
+              tecnicoNuevo: body.tecnicoId,
+              nombreTecnico: orden.tecnico?.name || null,
+            },
+          },
+        });
+      }
+
+      // Registrar envío de cotización
+      if (cotizacionEnviada) {
+        await tx.historialOrden.create({
+          data: {
+            ordenId: id,
+            usuarioId: session.user.id,
+            accion: "COTIZACION_ENVIADA",
+            detalles: {
+              monto: body.cotizacion,
+            },
+          },
+        });
+      }
+
+      // Registrar aprobación/rechazo de cotización
+      if (cotizacionAprobadaCambiada) {
+        const accion: AccionHistorial = body.cotizacionAprobada ? "COTIZACION_APROBADA" : "COTIZACION_RECHAZADA";
+        await tx.historialOrden.create({
+          data: {
+            ordenId: id,
+            usuarioId: session.user.id,
+            accion,
+            detalles: {
+              monto: orden.cotizacion ? Number(orden.cotizacion) : null,
+            },
+          },
+        });
+      }
+
+      // Registrar agregado de notas
+      if (body.notasTecnico !== undefined && body.notasTecnico !== ordenActual.notasTecnico) {
+        await tx.historialOrden.create({
+          data: {
+            ordenId: id,
+            usuarioId: session.user.id,
+            accion: "NOTA_AGREGADA",
+            detalles: {
+              nota: body.notasTecnico,
+            },
+          },
+        });
+      }
+
+      // Registrar ediciones generales (campos que no tienen acción específica)
+      const camposEditados: string[] = [];
+      if (body.diagnostico !== undefined && body.diagnostico !== ordenActual.diagnostico) camposEditados.push("diagnostico");
+      if (body.prioridad !== undefined && body.prioridad !== ordenActual.prioridad) camposEditados.push("prioridad");
+      if (body.marcaEquipo !== undefined) camposEditados.push("marcaEquipo");
+      if (body.modeloEquipo !== undefined) camposEditados.push("modeloEquipo");
+      if (body.serieEquipo !== undefined) camposEditados.push("serieEquipo");
+      if (body.fallaReportada !== undefined) camposEditados.push("fallaReportada");
+      if (body.fechaPromesa !== undefined) camposEditados.push("fechaPromesa");
+
+      if (camposEditados.length > 0 && !estadoCambiado && !tecnicoCambiado && !cotizacionEnviada) {
+        await tx.historialOrden.create({
+          data: {
+            ordenId: id,
+            usuarioId: session.user.id,
+            accion: "ORDEN_EDITADA",
+            detalles: {
+              camposModificados: camposEditados,
+            },
           },
         });
       }

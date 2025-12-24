@@ -33,8 +33,9 @@ export const supabase = new Proxy({} as SupabaseClient, {
   },
 });
 
-// Bucket name for evidencias
+// Bucket names
 export const EVIDENCIAS_BUCKET = "evidencias";
+export const FIRMAS_BUCKET = "firmas";
 
 // Helper to get public URL for an evidencia
 export function getEvidenciaPublicUrl(path: string): string {
@@ -46,6 +47,24 @@ export function getEvidenciaPublicUrl(path: string): string {
     .getPublicUrl(path);
 
   return data.publicUrl;
+}
+
+// Helper to get public URL for a firma
+export function getFirmaPublicUrl(path: string): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return "";
+
+  const { data } = supabase.storage
+    .from(FIRMAS_BUCKET)
+    .getPublicUrl(path);
+
+  return data.publicUrl;
+}
+
+// Helper to generate file path for firma
+export function generateFirmaPath(ordenId: string): string {
+  const timestamp = Date.now();
+  return `ordenes/${ordenId}/firma_${timestamp}.png`;
 }
 
 // Helper to generate file path for evidencia

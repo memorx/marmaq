@@ -152,70 +152,74 @@ export default function OrdenesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#092139]">Órdenes de Servicio</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {total} {total === 1 ? "orden" : "órdenes"} en total
+    <div className="space-y-4 lg:space-y-6">
+      {/* Header - Mobile optimizado */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl lg:text-2xl font-bold text-[#092139]">Órdenes de Servicio</h1>
+          <p className="text-gray-500 text-xs lg:text-sm mt-0.5">
+            {total} {total === 1 ? "orden" : "órdenes"}
           </p>
         </div>
-        <Button onClick={handleNewOrder} className="flex items-center gap-2">
+        <Button onClick={handleNewOrder} size="sm" className="flex items-center gap-2 flex-shrink-0">
           <Plus className="w-4 h-4" />
-          Nueva Orden
+          <span className="hidden sm:inline">Nueva Orden</span>
+          <span className="sm:hidden">Nueva</span>
         </Button>
       </div>
 
-      {/* Filtros */}
-      <Card className="p-4">
-        <div className="flex flex-col lg:flex-row gap-4">
+      {/* Filtros - Stack en móvil, row en desktop */}
+      <Card className="p-3 lg:p-4">
+        <div className="space-y-3 lg:space-y-0 lg:flex lg:flex-row lg:gap-4">
           {/* Búsqueda */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Buscar por folio, cliente, equipo..."
+              placeholder="Buscar folio, cliente..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
+              className="pl-10 py-3 lg:py-2"
             />
           </div>
 
-          {/* Tipo de Servicio */}
-          <select
-            value={tipoServicio}
-            onChange={(e) => {
-              setTipoServicio(e.target.value as TipoServicio | "");
-              setPage(1);
-            }}
-            className="px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
-          >
-            {TIPO_SERVICIO_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+          {/* Fila de selects en móvil */}
+          <div className="flex gap-2 lg:gap-4">
+            {/* Tipo de Servicio */}
+            <select
+              value={tipoServicio}
+              onChange={(e) => {
+                setTipoServicio(e.target.value as TipoServicio | "");
+                setPage(1);
+              }}
+              className="flex-1 lg:flex-none px-3 lg:px-4 py-3 lg:py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
+            >
+              {TIPO_SERVICIO_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
 
-          {/* Estado */}
-          <select
-            value={estado}
-            onChange={(e) => {
-              setEstado(e.target.value as EstadoOrden | "");
-              setPage(1);
-            }}
-            className="px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
-          >
-            {ESTADO_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            {/* Estado */}
+            <select
+              value={estado}
+              onChange={(e) => {
+                setEstado(e.target.value as EstadoOrden | "");
+                setPage(1);
+              }}
+              className="flex-1 lg:flex-none px-3 lg:px-4 py-3 lg:py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
+            >
+              {ESTADO_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          {/* Semáforo */}
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-400" />
+          {/* Semáforo - scroll horizontal en móvil */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 -mx-3 px-3 lg:mx-0 lg:px-0">
+            <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <div className="flex gap-1">
               {SEMAFORO_OPTIONS.map((opt) => (
                 <button
@@ -224,7 +228,7 @@ export default function OrdenesPage() {
                     setSemaforo(opt.value);
                     setPage(1);
                   }}
-                  className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                  className={`w-9 h-9 lg:w-8 lg:h-8 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 active:scale-95 ${
                     semaforo === opt.value
                       ? "border-[#092139] scale-110"
                       : "border-gray-200 hover:border-gray-400"
@@ -246,7 +250,7 @@ export default function OrdenesPage() {
         </div>
       </Card>
 
-      {/* Tabla */}
+      {/* Lista de órdenes */}
       <Card>
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -278,129 +282,182 @@ export default function OrdenesPage() {
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+          <>
+            {/* Tabla en desktop */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
 
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Folio
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Equipo
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Técnico
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {ordenes.map((orden) => (
-                  <tr
-                    key={orden.id}
-                    onClick={() => handleRowClick(orden.id)}
-                    className="hover:bg-gray-50 cursor-pointer transition-colors"
-                  >
-                    <td className="px-4 py-4">
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Folio
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Cliente
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Equipo
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tipo
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Técnico
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Estado
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {ordenes.map((orden) => (
+                    <tr
+                      key={orden.id}
+                      onClick={() => handleRowClick(orden.id)}
+                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
+                      <td className="px-4 py-4">
+                        <SemaforoDot color={orden.semaforo} />
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="font-mono font-medium text-[#092139]">
+                          {orden.folio}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {orden.cliente.nombre}
+                          </p>
+                          {orden.cliente.empresa && (
+                            <p className="text-sm text-gray-500">
+                              {orden.cliente.empresa}
+                            </p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div>
+                          <p className="text-gray-900">
+                            {orden.marcaEquipo} {orden.modeloEquipo}
+                          </p>
+                          {orden.serieEquipo && (
+                            <p className="text-sm text-gray-500 font-mono">
+                              S/N: {orden.serieEquipo}
+                            </p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <Badge variant={getBadgeVariant(orden.tipoServicio)}>
+                          {SERVICE_TYPE_LABELS[orden.tipoServicio]}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-4">
+                        {orden.tecnico ? (
+                          <span className="text-gray-900">{orden.tecnico.name}</span>
+                        ) : (
+                          <span className="text-gray-400 italic">Sin asignar</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4">
+                        <Badge variant={getStatusBadgeVariant(orden.estado)}>
+                          {STATUS_LABELS[orden.estado]}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-4">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRowClick(orden.id);
+                          }}
+                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="Ver detalle"
+                        >
+                          <Eye className="w-4 h-4 text-gray-500" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Cards en móvil */}
+            <div className="lg:hidden divide-y divide-gray-100">
+              {ordenes.map((orden) => (
+                <button
+                  key={orden.id}
+                  onClick={() => handleRowClick(orden.id)}
+                  className="w-full text-left p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                >
+                  {/* Fila superior: semáforo, folio, tipo badge */}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
                       <SemaforoDot color={orden.semaforo} />
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="font-mono font-medium text-[#092139]">
+                      <span className="font-mono font-semibold text-[#092139]">
                         {orden.folio}
                       </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {orden.cliente.nombre}
-                        </p>
-                        {orden.cliente.empresa && (
-                          <p className="text-sm text-gray-500">
-                            {orden.cliente.empresa}
-                          </p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div>
-                        <p className="text-gray-900">
-                          {orden.marcaEquipo} {orden.modeloEquipo}
-                        </p>
-                        {orden.serieEquipo && (
-                          <p className="text-sm text-gray-500 font-mono">
-                            S/N: {orden.serieEquipo}
-                          </p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <Badge variant={getBadgeVariant(orden.tipoServicio)}>
-                        {SERVICE_TYPE_LABELS[orden.tipoServicio]}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-4">
-                      {orden.tecnico ? (
-                        <span className="text-gray-900">{orden.tecnico.name}</span>
-                      ) : (
-                        <span className="text-gray-400 italic">Sin asignar</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4">
-                      <Badge variant={getStatusBadgeVariant(orden.estado)}>
-                        {STATUS_LABELS[orden.estado]}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-4">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRowClick(orden.id);
-                        }}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="Ver detalle"
-                      >
-                        <Eye className="w-4 h-4 text-gray-500" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                    <Badge variant={getBadgeVariant(orden.tipoServicio)} className="text-xs">
+                      {SERVICE_TYPE_LABELS[orden.tipoServicio]}
+                    </Badge>
+                  </div>
+
+                  {/* Cliente */}
+                  <p className="font-medium text-gray-900 text-sm">
+                    {orden.cliente.nombre}
+                    {orden.cliente.empresa && (
+                      <span className="text-gray-500 font-normal"> • {orden.cliente.empresa}</span>
+                    )}
+                  </p>
+
+                  {/* Equipo */}
+                  <p className="text-sm text-gray-500 mt-1">
+                    {orden.marcaEquipo} {orden.modeloEquipo}
+                    {orden.serieEquipo && (
+                      <span className="font-mono text-xs"> • S/N: {orden.serieEquipo}</span>
+                    )}
+                  </p>
+
+                  {/* Fila inferior: estado y técnico */}
+                  <div className="flex items-center justify-between mt-3">
+                    <Badge variant={getStatusBadgeVariant(orden.estado)} className="text-xs">
+                      {STATUS_LABELS[orden.estado]}
+                    </Badge>
+                    <span className="text-xs text-gray-500">
+                      {orden.tecnico ? orden.tecnico.name : "Sin asignar"}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
         )}
 
-        {/* Paginación */}
+        {/* Paginación - responsive */}
         {!loading && !error && ordenes.length > 0 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-            <p className="text-sm text-gray-500">
-              Mostrando {(page - 1) * pageSize + 1} a{" "}
-              {Math.min(page * pageSize, total)} de {total}
+          <div className="flex flex-col sm:flex-row items-center justify-between px-4 lg:px-6 py-4 border-t border-gray-100 gap-3">
+            <p className="text-xs sm:text-sm text-gray-500 order-2 sm:order-1">
+              {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} de {total}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 order-1 sm:order-2 w-full sm:w-auto justify-center sm:justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
+                className="flex-1 sm:flex-none"
               >
                 <ChevronLeft className="w-4 h-4" />
-                Anterior
+                <span className="hidden sm:inline">Anterior</span>
               </Button>
-              <span className="text-sm text-gray-600 px-2">
+              <span className="text-sm text-gray-600 px-3 whitespace-nowrap">
                 {page} / {totalPages}
               </span>
               <Button
@@ -408,8 +465,9 @@ export default function OrdenesPage() {
                 size="sm"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
+                className="flex-1 sm:flex-none"
               >
-                Siguiente
+                <span className="hidden sm:inline">Siguiente</span>
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
