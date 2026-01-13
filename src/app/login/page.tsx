@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Button, Input, Card } from "@/components/ui";
 
 export default function LoginPage() {
@@ -45,13 +44,10 @@ export default function LoginPage() {
           {/* Logo y título */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <Image
+              <img
                 src="/images/logo-marmaq.jpeg"
                 alt="MARMAQ Logo"
-                width={120}
-                height={120}
-                className="rounded-lg"
-                priority
+                className="w-24 h-24 object-contain rounded-lg"
               />
             </div>
             <h1 className="text-2xl font-bold text-[#092139]">
