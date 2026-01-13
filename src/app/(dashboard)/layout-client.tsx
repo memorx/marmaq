@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { SessionProvider } from "next-auth/react";
 import { Sidebar, Header } from "@/components/layout";
 import { usePathname } from "next/navigation";
 
@@ -49,24 +50,26 @@ export function DashboardLayoutClient({ user, children }: DashboardLayoutClientP
   const { title, subtitle } = getPageInfo();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar
-        user={user}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
-
-      {/* Main content area */}
-      <div className="lg:ml-[240px] min-h-screen flex flex-col">
-        <Header
-          title={title}
-          subtitle={subtitle}
-          onMenuClick={() => setSidebarOpen(true)}
+    <SessionProvider>
+      <div className="min-h-screen bg-gray-50">
+        <Sidebar
+          user={user}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
-        <main className="flex-1 p-4 lg:p-6">
-          {children}
-        </main>
+
+        {/* Main content area */}
+        <div className="lg:ml-[240px] min-h-screen flex flex-col">
+          <Header
+            title={title}
+            subtitle={subtitle}
+            onMenuClick={() => setSidebarOpen(true)}
+          />
+          <main className="flex-1 p-4 lg:p-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </SessionProvider>
   );
 }
