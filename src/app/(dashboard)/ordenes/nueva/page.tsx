@@ -152,7 +152,7 @@ export default function NuevaOrdenPage() {
         const res = await fetch("/api/usuarios?role=TECNICO");
         if (res.ok) {
           const data = await res.json();
-          setTecnicos(data);
+          setTecnicos(data.usuarios || []);
         }
       } catch {
         // Datos de prueba si no hay API
