@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { TipoNotificacion, PrioridadNotif } from "@prisma/client";
+import { TipoNotificacion, PrioridadNotif } from "@/types/notificaciones";
 
 // ============ TIPOS ============
 

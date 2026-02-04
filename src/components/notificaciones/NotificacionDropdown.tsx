@@ -10,7 +10,7 @@ import {
   Check,
   Loader2,
 } from "lucide-react";
-import { TipoNotificacion, PrioridadNotif } from "@prisma/client";
+import { TipoNotificacion, PrioridadNotif } from "@/types/notificaciones";
 import { useNotificaciones, type Notificacion } from "@/hooks/useNotificaciones";
 import { NotificacionToast } from "./NotificacionToast";
 import { tiempoRelativo } from "@/lib/utils/tiempo-relativo";

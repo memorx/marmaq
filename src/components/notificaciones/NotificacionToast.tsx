@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { X, Bell, AlertTriangle, CheckCircle, Info } from "lucide-react";
-import { TipoNotificacion, PrioridadNotif } from "@prisma/client";
+import { TipoNotificacion, PrioridadNotif } from "@/types/notificaciones";
 import type { Notificacion } from "@/hooks/useNotificaciones";
 
 interface NotificacionToastProps {
