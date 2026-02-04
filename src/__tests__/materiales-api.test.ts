@@ -599,3 +599,116 @@ describe("Lógica de negocio", () => {
     });
   });
 });
+
+describe("Filtro stock bajo - lógica de filtrado", () => {
+  // Simular la lógica de filtrado que usa la API
+  function filtrarPorStockBajo<T extends { stockActual: number; stockMinimo: number }>(
+    materiales: T[]
+  ): T[] {
+    return materiales.filter((m) => m.stockActual < m.stockMinimo);
+  }
+
+  it("filtra materiales donde stockActual < stockMinimo", () => {
+    const materiales = [
+      { id: "1", nombre: "Mat A", stockActual: 5, stockMinimo: 10 },
+      { id: "2", nombre: "Mat B", stockActual: 15, stockMinimo: 10 },
+      { id: "3", nombre: "Mat C", stockActual: 0, stockMinimo: 5 },
+    ];
+
+    const resultado = filtrarPorStockBajo(materiales);
+
+    expect(resultado).toHaveLength(2);
+    expect(resultado.map((m) => m.id)).toEqual(["1", "3"]);
+  });
+
+  it("no incluye materiales donde stockActual >= stockMinimo", () => {
+    const materiales = [
+      { id: "1", nombre: "Mat A", stockActual: 10, stockMinimo: 10 }, // igual
+      { id: "2", nombre: "Mat B", stockActual: 15, stockMinimo: 10 }, // mayor
+      { id: "3", nombre: "Mat C", stockActual: 20, stockMinimo: 5 },  // mucho mayor
+    ];
+
+    const resultado = filtrarPorStockBajo(materiales);
+
+    expect(resultado).toHaveLength(0);
+  });
+
+  it("funciona con array vacío", () => {
+    const materiales: { id: string; stockActual: number; stockMinimo: number }[] = [];
+
+    const resultado = filtrarPorStockBajo(materiales);
+
+    expect(resultado).toHaveLength(0);
+  });
+
+  it("funciona cuando todos tienen stock bajo", () => {
+    const materiales = [
+      { id: "1", nombre: "Mat A", stockActual: 1, stockMinimo: 10 },
+      { id: "2", nombre: "Mat B", stockActual: 2, stockMinimo: 10 },
+      { id: "3", nombre: "Mat C", stockActual: 0, stockMinimo: 5 },
+    ];
+
+    const resultado = filtrarPorStockBajo(materiales);
+
+    expect(resultado).toHaveLength(3);
+  });
+
+  it("maneja stockMinimo en cero correctamente", () => {
+    const materiales = [
+      { id: "1", nombre: "Mat A", stockActual: 0, stockMinimo: 0 }, // no es bajo (0 no es < 0)
+      { id: "2", nombre: "Mat B", stockActual: 5, stockMinimo: 0 }, // no es bajo
+    ];
+
+    const resultado = filtrarPorStockBajo(materiales);
+
+    expect(resultado).toHaveLength(0);
+  });
+
+  describe("paginación manual de resultados filtrados", () => {
+    const materiales = [
+      { id: "1", stockActual: 1, stockMinimo: 10 },
+      { id: "2", stockActual: 2, stockMinimo: 10 },
+      { id: "3", stockActual: 3, stockMinimo: 10 },
+      { id: "4", stockActual: 4, stockMinimo: 10 },
+      { id: "5", stockActual: 5, stockMinimo: 10 },
+    ];
+
+    it("pagina correctamente primera página", () => {
+      const filtrados = filtrarPorStockBajo(materiales);
+      const page = 1;
+      const pageSize = 2;
+      const paginados = filtrados.slice((page - 1) * pageSize, page * pageSize);
+
+      expect(paginados).toHaveLength(2);
+      expect(paginados.map((m) => m.id)).toEqual(["1", "2"]);
+    });
+
+    it("pagina correctamente segunda página", () => {
+      const filtrados = filtrarPorStockBajo(materiales);
+      const page = 2;
+      const pageSize = 2;
+      const paginados = filtrados.slice((page - 1) * pageSize, page * pageSize);
+
+      expect(paginados).toHaveLength(2);
+      expect(paginados.map((m) => m.id)).toEqual(["3", "4"]);
+    });
+
+    it("última página puede tener menos elementos", () => {
+      const filtrados = filtrarPorStockBajo(materiales);
+      const page = 3;
+      const pageSize = 2;
+      const paginados = filtrados.slice((page - 1) * pageSize, page * pageSize);
+
+      expect(paginados).toHaveLength(1);
+      expect(paginados.map((m) => m.id)).toEqual(["5"]);
+    });
+
+    it("calcula total de páginas correctamente", () => {
+      const filtrados = filtrarPorStockBajo(materiales);
+      const pageSize = 2;
+      const totalPages = Math.ceil(filtrados.length / pageSize);
+
+      expect(totalPages).toBe(3);
+    });
+  });
+});

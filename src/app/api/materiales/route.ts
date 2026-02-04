@@ -44,13 +44,6 @@ export async function GET(request: NextRequest) {
       where.categoria = categoria;
     }
 
-    // Filtro por stock bajo
-    if (stockBajo) {
-      where.stockActual = {
-        lt: prisma.material.fields.stockMinimo,
-      };
-    }
-
     // Filtro por activos
     if (activos) {
       where.activo = true;
@@ -64,6 +57,62 @@ export async function GET(request: NextRequest) {
       : "nombre";
     const sortDir = orderDir === "desc" ? "desc" : "asc";
 
+    // Si stockBajo está activo, necesitamos filtrar en memoria porque
+    // Prisma no soporta comparar dos campos de la misma tabla en where
+    if (stockBajo) {
+      // Obtener TODOS los materiales que coincidan con otros filtros
+      const todosMateriales = await prisma.material.findMany({
+        where,
+        select: {
+          id: true,
+          sku: true,
+          nombre: true,
+          descripcion: true,
+          categoria: true,
+          stockActual: true,
+          stockMinimo: true,
+          precioCompra: true,
+          precioVenta: true,
+          activo: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: { usos: true },
+          },
+        },
+        orderBy: { [sortField]: sortDir },
+      });
+
+      // Filtrar en memoria: stockActual < stockMinimo
+      const materialesFiltrados = todosMateriales.filter(
+        (m) => m.stockActual < m.stockMinimo
+      );
+
+      // Paginar manualmente
+      const total = materialesFiltrados.length;
+      const materialesPaginados = materialesFiltrados.slice(
+        (page - 1) * pageSize,
+        page * pageSize
+      );
+
+      // Agregar flag de stock bajo (siempre true en este caso)
+      const materialesConAlerta = materialesPaginados.map((m) => ({
+        ...m,
+        stockBajo: true,
+      }));
+
+      return NextResponse.json({
+        materiales: materialesConAlerta,
+        pagination: {
+          total,
+          page,
+          pageSize,
+          totalPages: Math.ceil(total / pageSize),
+        },
+      });
+    }
+
+    // Flujo normal sin filtro de stockBajo
     // Contar total
     const total = await prisma.material.count({ where });
 

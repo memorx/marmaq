@@ -35,6 +35,24 @@ const mockPrisma = prisma as unknown as {
   };
 };
 
+// Helper para crear órdenes mock con campos necesarios para calcularSemaforo
+function createMockOrden(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "orden-1",
+    folio: "OS-2025-0001",
+    estado: "EN_REPARACION",
+    tipoServicio: "POR_COBRAR",
+    prioridad: "NORMAL",
+    marcaEquipo: "TORREY",
+    modeloEquipo: "L-EQ 10",
+    fechaRecepcion: new Date(),
+    fechaReparacion: null,
+    updatedAt: new Date(),
+    cliente: { nombre: "Test", empresa: null },
+    ...overrides,
+  };
+}
+
 describe("GET /api/dashboard/stats", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -195,6 +213,10 @@ describe("GET /api/dashboard/stats", () => {
         if (params.where?.estado === "ENTREGADO") {
           return [{ fechaRecepcion, fechaEntrega }];
         }
+        // Query para órdenes activas (semáforo)
+        if (params.where?.estado?.notIn) {
+          return [];
+        }
         // Query para órdenes recientes (take: 5)
         if (params.take === 5) {
           return [];
@@ -239,35 +261,422 @@ describe("GET /api/dashboard/stats", () => {
     });
   });
 
-  describe("Conteos del semáforo", () => {
+  describe("Conteos del semáforo - lógica alineada con calcularSemaforo", () => {
     beforeEach(() => {
       mockAuth.mockResolvedValue({
         user: { id: "user-1", name: "Test User", role: "ADMIN" },
       });
     });
 
-    it("debe contar órdenes para cada color del semáforo", async () => {
-      let countCall = 0;
-      mockPrisma.orden.count.mockImplementation(async () => {
-        countCall++;
-        // Simular diferentes conteos según la llamada
-        const counts = [3, 5, 4, 12, 2, 26, 8, 4, 3, 7]; // rojo, naranja, amarillo, verde, azul, activas, diagnostico, reparados, etc.
-        return counts[countCall - 1] || 0;
+    it("ROJO: cuenta LISTO_ENTREGA con fechaReparacion > 5 días", async () => {
+      const hace10Dias = new Date();
+      hace10Dias.setDate(hace10Dias.getDate() - 10);
+
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        // Query para órdenes activas (semáforo)
+        if (params.where?.estado?.notIn) {
+          return [
+            createMockOrden({
+              id: "orden-roja",
+              estado: "LISTO_ENTREGA",
+              fechaReparacion: hace10Dias, // 10 días sin recoger
+              fechaRecepcion: hace10Dias,
+            }),
+          ];
+        }
+        return [];
       });
 
       const response = await GET();
       const data = await response.json();
 
-      expect(data.semaforo[0]).toMatchObject({
-        color: "rojo",
-        label: "Crítico",
-        description: "Equipo listo > 5 días sin recoger",
+      const rojoItem = data.semaforo.find((s: { color: string }) => s.color === "rojo");
+      expect(rojoItem.count).toBe(1);
+    });
+
+    it("ROJO: NO cuenta LISTO_ENTREGA con < 5 días (esas son VERDE)", async () => {
+      const hace2Dias = new Date();
+      hace2Dias.setDate(hace2Dias.getDate() - 2);
+
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.where?.estado?.notIn) {
+          return [
+            createMockOrden({
+              id: "orden-verde",
+              estado: "LISTO_ENTREGA",
+              fechaReparacion: hace2Dias, // Solo 2 días, debería ser VERDE
+              fechaRecepcion: hace2Dias,
+            }),
+          ];
+        }
+        return [];
       });
-      expect(typeof data.semaforo[0].count).toBe("number");
+
+      const response = await GET();
+      const data = await response.json();
+
+      const rojoItem = data.semaforo.find((s: { color: string }) => s.color === "rojo");
+      const verdeItem = data.semaforo.find((s: { color: string }) => s.color === "verde");
+      expect(rojoItem.count).toBe(0);
+      expect(verdeItem.count).toBe(1);
+    });
+
+    it("AMARILLO: cuenta EN_DIAGNOSTICO con fechaRecepcion > 72 horas", async () => {
+      const hace5Dias = new Date();
+      hace5Dias.setDate(hace5Dias.getDate() - 5); // > 72 horas
+
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.where?.estado?.notIn) {
+          return [
+            createMockOrden({
+              id: "orden-amarilla",
+              estado: "EN_DIAGNOSTICO",
+              fechaRecepcion: hace5Dias,
+            }),
+          ];
+        }
+        return [];
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      const amarilloItem = data.semaforo.find((s: { color: string }) => s.color === "amarillo");
+      expect(amarilloItem.count).toBe(1);
+    });
+
+    it("AMARILLO: cuenta COTIZACION_PENDIENTE con fechaRecepcion > 72 horas", async () => {
+      const hace5Dias = new Date();
+      hace5Dias.setDate(hace5Dias.getDate() - 5);
+
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.where?.estado?.notIn) {
+          return [
+            createMockOrden({
+              id: "orden-amarilla-cot",
+              estado: "COTIZACION_PENDIENTE",
+              fechaRecepcion: hace5Dias,
+            }),
+          ];
+        }
+        return [];
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      const amarilloItem = data.semaforo.find((s: { color: string }) => s.color === "amarillo");
+      expect(amarilloItem.count).toBe(1);
+    });
+
+    it("AMARILLO: NO cuenta EN_DIAGNOSTICO con < 72h (esas son VERDE)", async () => {
+      const hace1Dia = new Date();
+      hace1Dia.setDate(hace1Dia.getDate() - 1); // < 72 horas
+
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.where?.estado?.notIn) {
+          return [
+            createMockOrden({
+              id: "orden-verde-diag",
+              estado: "EN_DIAGNOSTICO",
+              fechaRecepcion: hace1Dia,
+            }),
+          ];
+        }
+        return [];
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      const amarilloItem = data.semaforo.find((s: { color: string }) => s.color === "amarillo");
+      const verdeItem = data.semaforo.find((s: { color: string }) => s.color === "verde");
+      expect(amarilloItem.count).toBe(0);
+      expect(verdeItem.count).toBe(1);
+    });
+
+    it("NARANJA: cuenta ESPERA_REFACCIONES sin importar tiempo", async () => {
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.where?.estado?.notIn) {
+          return [
+            createMockOrden({
+              id: "orden-naranja",
+              estado: "ESPERA_REFACCIONES",
+              fechaRecepcion: new Date(), // No importa la fecha
+            }),
+          ];
+        }
+        return [];
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      const naranjaItem = data.semaforo.find((s: { color: string }) => s.color === "naranja");
+      expect(naranjaItem.count).toBe(1);
+    });
+
+    it("AZUL: cuenta RECIBIDO de hoy", async () => {
+      const hoy = new Date();
+
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.where?.estado?.notIn) {
+          return [
+            createMockOrden({
+              id: "orden-azul",
+              estado: "RECIBIDO",
+              fechaRecepcion: hoy,
+            }),
+          ];
+        }
+        return [];
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      const azulItem = data.semaforo.find((s: { color: string }) => s.color === "azul");
+      expect(azulItem.count).toBe(1);
+    });
+
+    it("VERDE: cuenta órdenes activas que no caen en otra categoría", async () => {
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.where?.estado?.notIn) {
+          return [
+            createMockOrden({
+              id: "orden-verde",
+              estado: "EN_REPARACION",
+              fechaRecepcion: new Date(),
+            }),
+          ];
+        }
+        return [];
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      const verdeItem = data.semaforo.find((s: { color: string }) => s.color === "verde");
+      expect(verdeItem.count).toBe(1);
+    });
+
+    it("VERDE: incluye EN_REPARACION, EN_DIAGNOSTICO < 72h, LISTO_ENTREGA < 5 días", async () => {
+      const hace1Dia = new Date();
+      hace1Dia.setDate(hace1Dia.getDate() - 1);
+
+      const hace2Dias = new Date();
+      hace2Dias.setDate(hace2Dias.getDate() - 2);
+
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.where?.estado?.notIn) {
+          return [
+            createMockOrden({
+              id: "orden-verde-1",
+              estado: "EN_REPARACION",
+              fechaRecepcion: new Date(),
+            }),
+            createMockOrden({
+              id: "orden-verde-2",
+              estado: "EN_DIAGNOSTICO",
+              fechaRecepcion: hace1Dia, // < 72h
+            }),
+            createMockOrden({
+              id: "orden-verde-3",
+              estado: "LISTO_ENTREGA",
+              fechaReparacion: hace2Dias, // < 5 días
+              fechaRecepcion: hace2Dias,
+            }),
+          ];
+        }
+        return [];
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      const verdeItem = data.semaforo.find((s: { color: string }) => s.color === "verde");
+      expect(verdeItem.count).toBe(3);
+    });
+
+    it("debe contar múltiples órdenes por color correctamente", async () => {
+      const hace10Dias = new Date();
+      hace10Dias.setDate(hace10Dias.getDate() - 10);
+
+      const hace5Dias = new Date();
+      hace5Dias.setDate(hace5Dias.getDate() - 5);
+
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.where?.estado?.notIn) {
+          return [
+            // 2 rojas
+            createMockOrden({ id: "roja-1", estado: "LISTO_ENTREGA", fechaReparacion: hace10Dias, fechaRecepcion: hace10Dias }),
+            createMockOrden({ id: "roja-2", estado: "LISTO_ENTREGA", fechaReparacion: hace10Dias, fechaRecepcion: hace10Dias }),
+            // 1 naranja
+            createMockOrden({ id: "naranja-1", estado: "ESPERA_REFACCIONES", fechaRecepcion: new Date() }),
+            // 2 amarillas
+            createMockOrden({ id: "amarilla-1", estado: "EN_DIAGNOSTICO", fechaRecepcion: hace5Dias }),
+            createMockOrden({ id: "amarilla-2", estado: "COTIZACION_PENDIENTE", fechaRecepcion: hace5Dias }),
+            // 1 verde
+            createMockOrden({ id: "verde-1", estado: "EN_REPARACION", fechaRecepcion: new Date() }),
+            // 1 azul
+            createMockOrden({ id: "azul-1", estado: "RECIBIDO", fechaRecepcion: new Date() }),
+          ];
+        }
+        return [];
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      expect(data.semaforo.find((s: { color: string }) => s.color === "rojo").count).toBe(2);
+      expect(data.semaforo.find((s: { color: string }) => s.color === "naranja").count).toBe(1);
+      expect(data.semaforo.find((s: { color: string }) => s.color === "amarillo").count).toBe(2);
+      expect(data.semaforo.find((s: { color: string }) => s.color === "verde").count).toBe(1);
+      expect(data.semaforo.find((s: { color: string }) => s.color === "azul").count).toBe(1);
     });
   });
 
-  describe("Órdenes recientes", () => {
+  describe("Semáforo en órdenes recientes - usa calcularSemaforo directamente", () => {
+    beforeEach(() => {
+      mockAuth.mockResolvedValue({
+        user: { id: "user-1", name: "Test User", role: "ADMIN" },
+      });
+    });
+
+    it("orden LISTO_ENTREGA > 5 días muestra semáforo 'rojo'", async () => {
+      const hace10Dias = new Date();
+      hace10Dias.setDate(hace10Dias.getDate() - 10);
+
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.take === 5) {
+          return [
+            createMockOrden({
+              id: "orden-1",
+              estado: "LISTO_ENTREGA",
+              fechaReparacion: hace10Dias,
+              fechaRecepcion: hace10Dias,
+            }),
+          ];
+        }
+        return [];
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      expect(data.ordenesRecientes[0].semaforo).toBe("rojo");
+    });
+
+    it("orden ESPERA_REFACCIONES muestra semáforo 'naranja'", async () => {
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.take === 5) {
+          return [
+            createMockOrden({
+              id: "orden-1",
+              estado: "ESPERA_REFACCIONES",
+              fechaRecepcion: new Date(),
+            }),
+          ];
+        }
+        return [];
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      expect(data.ordenesRecientes[0].semaforo).toBe("naranja");
+    });
+
+    it("orden EN_DIAGNOSTICO > 72h muestra semáforo 'amarillo'", async () => {
+      const hace5Dias = new Date();
+      hace5Dias.setDate(hace5Dias.getDate() - 5);
+
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.take === 5) {
+          return [
+            createMockOrden({
+              id: "orden-1",
+              estado: "EN_DIAGNOSTICO",
+              fechaRecepcion: hace5Dias,
+            }),
+          ];
+        }
+        return [];
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      expect(data.ordenesRecientes[0].semaforo).toBe("amarillo");
+    });
+
+    it("orden COTIZACION_PENDIENTE > 72h muestra semáforo 'amarillo'", async () => {
+      const hace5Dias = new Date();
+      hace5Dias.setDate(hace5Dias.getDate() - 5);
+
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.take === 5) {
+          return [
+            createMockOrden({
+              id: "orden-1",
+              estado: "COTIZACION_PENDIENTE",
+              fechaRecepcion: hace5Dias,
+            }),
+          ];
+        }
+        return [];
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      expect(data.ordenesRecientes[0].semaforo).toBe("amarillo");
+    });
+
+    it("orden RECIBIDO hoy muestra semáforo 'azul'", async () => {
+      const hoy = new Date();
+
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.take === 5) {
+          return [
+            createMockOrden({
+              id: "orden-1",
+              estado: "RECIBIDO",
+              fechaRecepcion: hoy,
+            }),
+          ];
+        }
+        return [];
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      expect(data.ordenesRecientes[0].semaforo).toBe("azul");
+    });
+
+    it("orden EN_REPARACION reciente muestra semáforo 'verde'", async () => {
+      mockPrisma.orden.findMany.mockImplementation(async (params) => {
+        if (params.take === 5) {
+          return [
+            createMockOrden({
+              id: "orden-1",
+              estado: "EN_REPARACION",
+              fechaRecepcion: new Date(),
+            }),
+          ];
+        }
+        return [];
+      });
+
+      const response = await GET();
+      const data = await response.json();
+
+      expect(data.ordenesRecientes[0].semaforo).toBe("verde");
+    });
+  });
+
+  describe("Órdenes recientes - formato", () => {
     beforeEach(() => {
       mockAuth.mockResolvedValue({
         user: { id: "user-1", name: "Test User", role: "ADMIN" },
@@ -286,6 +695,7 @@ describe("GET /api/dashboard/stats", () => {
               tipoServicio: "GARANTIA",
               estado: "EN_REPARACION",
               fechaRecepcion: new Date(),
+              fechaReparacion: null,
               updatedAt: new Date(),
               cliente: { nombre: "Juan Pérez", empresa: "Carnicería El Toro" },
             },
@@ -308,24 +718,13 @@ describe("GET /api/dashboard/stats", () => {
       });
     });
 
-    it("debe asignar semáforo correcto a órdenes", async () => {
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-
+    it("debe usar nombre de cliente si no hay empresa", async () => {
       mockPrisma.orden.findMany.mockImplementation(async (params) => {
         if (params.take === 5) {
           return [
-            {
-              id: "orden-1",
-              folio: "OS-2024-0001",
-              marcaEquipo: "TORREY",
-              modeloEquipo: "L-EQ 10",
-              tipoServicio: "GARANTIA",
-              estado: "ESPERA_REFACCIONES",
-              fechaRecepcion: new Date(),
-              updatedAt: new Date(),
-              cliente: { nombre: "Juan", empresa: null },
-            },
+            createMockOrden({
+              cliente: { nombre: "Juan Pérez", empresa: null },
+            }),
           ];
         }
         return [];
@@ -334,7 +733,7 @@ describe("GET /api/dashboard/stats", () => {
       const response = await GET();
       const data = await response.json();
 
-      expect(data.ordenesRecientes[0].semaforo).toBe("naranja");
+      expect(data.ordenesRecientes[0].cliente).toBe("Juan Pérez");
     });
   });
 

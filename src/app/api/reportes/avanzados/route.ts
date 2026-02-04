@@ -4,6 +4,7 @@ import prisma from "@/lib/db/prisma";
 import { EstadoOrden, TipoServicio } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 // Labels
 const STATUS_LABELS: Record<EstadoOrden, string> = {
@@ -33,8 +34,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // Solo ADMIN y SUPER_ADMIN pueden ver reportes avanzados
-    if (!["ADMIN", "SUPER_ADMIN"].includes(session.user.role as string)) {
+    // Solo SUPER_ADMIN y COORD_SERVICIO pueden ver reportes avanzados
+    if (!["SUPER_ADMIN", "COORD_SERVICIO"].includes(session.user.role as string)) {
       return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
     }
 

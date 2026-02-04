@@ -13,6 +13,10 @@ import {
   type SemaforoColor,
 } from "@/types/ordenes";
 import { Prisma, EstadoOrden, TipoServicio, Prioridad } from "@prisma/client";
+import {
+  crearOrdenConFolio,
+  FolioGenerationError,
+} from "@/lib/utils/folio-generator";
 
 // ============ GET /api/ordenes ============
 // Lista órdenes con filtros, paginación y cálculo de semáforo
@@ -219,35 +223,16 @@ export async function POST(request: NextRequest) {
         clienteId = nuevoCliente.id;
       }
 
-      // 2. Generar folio automático: OS-2024-0001
-      const year = new Date().getFullYear();
-      const prefix = `OS-${year}-`;
-
-      const ultimaOrden = await tx.orden.findFirst({
-        where: {
-          folio: { startsWith: prefix },
-        },
-        orderBy: { folio: "desc" },
-        select: { folio: true },
-      });
-
-      let nuevoNumero = 1;
-      if (ultimaOrden) {
-        const ultimoNumero = parseInt(ultimaOrden.folio.split("-")[2]);
-        nuevoNumero = ultimoNumero + 1;
-      }
-
-      const folio = `${prefix}${nuevoNumero.toString().padStart(4, "0")}`;
-
-      // 3. Crear la orden
-      const nuevaOrden = await tx.orden.create({
-        data: {
-          folio,
+      // 2. Crear la orden con folio automático (con retry para race conditions)
+      // Formato: OS-{YEAR}-{NNNN} (ej: OS-2025-0001)
+      const nuevaOrden = await crearOrdenConFolio({
+        tx,
+        orderData: {
           tipoServicio: body.tipoServicio,
           prioridad: body.prioridad || "NORMAL",
-          clienteId: clienteId!,
-          creadoPorId: session.user.id,
-          tecnicoId: body.tecnicoId,
+          cliente: { connect: { id: clienteId! } },
+          creadoPor: { connect: { id: session.user.id } },
+          tecnico: body.tecnicoId ? { connect: { id: body.tecnicoId } } : undefined,
           // Equipo
           marcaEquipo: body.marcaEquipo,
           modeloEquipo: body.modeloEquipo,
@@ -276,7 +261,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 4. Crear registro en historial de estados
+      // 3. Crear registro en historial de estados
       await tx.historialEstado.create({
         data: {
           ordenId: nuevaOrden.id,
@@ -287,7 +272,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 5. Crear registro en historial completo de orden
+      // 4. Crear registro en historial completo de orden
       await tx.historialOrden.create({
         data: {
           ordenId: nuevaOrden.id,
@@ -308,6 +293,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(orden, { status: 201 });
   } catch (error) {
     console.error("Error creating orden:", error);
+
+    // Handle folio generation exhausted retries
+    if (error instanceof FolioGenerationError) {
+      return NextResponse.json(
+        { error: "No se pudo generar un folio único. Intente de nuevo." },
+        { status: 409 }
+      );
+    }
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {

@@ -64,7 +64,7 @@ describe("GET /api/reportes/avanzados", () => {
       expect(data.error).toBe("No autorizado");
     });
 
-    it("debe rechazar usuarios sin rol ADMIN", async () => {
+    it("debe rechazar usuarios sin rol autorizado", async () => {
       mockAuth.mockResolvedValue({
         user: { id: "user-1", name: "Test", role: "TECNICO" },
       });
@@ -77,9 +77,9 @@ describe("GET /api/reportes/avanzados", () => {
       expect(data.error).toBe("Sin permisos");
     });
 
-    it("debe rechazar usuarios con rol RECEPCION", async () => {
+    it("debe rechazar usuarios con rol REFACCIONES", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test", role: "RECEPCION" },
+        user: { id: "user-1", name: "Test", role: "REFACCIONES" },
       });
 
       const request = createRequest("/api/reportes/avanzados");
@@ -88,9 +88,9 @@ describe("GET /api/reportes/avanzados", () => {
       expect(response.status).toBe(403);
     });
 
-    it("debe permitir acceso a ADMIN", async () => {
+    it("debe permitir acceso a COORD_SERVICIO", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test", role: "ADMIN" },
+        user: { id: "user-1", name: "Test", role: "COORD_SERVICIO" },
       });
 
       const request = createRequest("/api/reportes/avanzados");
@@ -114,7 +114,7 @@ describe("GET /api/reportes/avanzados", () => {
   describe("Estructura de respuesta", () => {
     beforeEach(() => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test", role: "ADMIN" },
+        user: { id: "user-1", name: "Test", role: "SUPER_ADMIN" },
       });
     });
 
@@ -162,7 +162,7 @@ describe("GET /api/reportes/avanzados", () => {
   describe("Filtros", () => {
     beforeEach(() => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test", role: "ADMIN" },
+        user: { id: "user-1", name: "Test", role: "SUPER_ADMIN" },
       });
     });
 
@@ -214,7 +214,7 @@ describe("GET /api/reportes/avanzados", () => {
   describe("Reporte de técnicos", () => {
     beforeEach(() => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test", role: "ADMIN" },
+        user: { id: "user-1", name: "Test", role: "SUPER_ADMIN" },
       });
     });
 
@@ -277,7 +277,7 @@ describe("GET /api/reportes/avanzados", () => {
   describe("Reporte por tipo de servicio", () => {
     beforeEach(() => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test", role: "ADMIN" },
+        user: { id: "user-1", name: "Test", role: "SUPER_ADMIN" },
       });
     });
 
@@ -348,7 +348,7 @@ describe("GET /api/reportes/avanzados", () => {
   describe("Reporte de tiempos", () => {
     beforeEach(() => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test", role: "ADMIN" },
+        user: { id: "user-1", name: "Test", role: "SUPER_ADMIN" },
       });
     });
 
@@ -405,7 +405,7 @@ describe("GET /api/reportes/avanzados", () => {
   describe("Por tipo por mes", () => {
     beforeEach(() => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test", role: "ADMIN" },
+        user: { id: "user-1", name: "Test", role: "SUPER_ADMIN" },
       });
     });
 
@@ -426,7 +426,7 @@ describe("GET /api/reportes/avanzados", () => {
   describe("Manejo de errores", () => {
     it("debe manejar errores de base de datos", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test", role: "ADMIN" },
+        user: { id: "user-1", name: "Test", role: "SUPER_ADMIN" },
       });
 
       mockPrisma.user.findMany.mockRejectedValue(new Error("Database error"));

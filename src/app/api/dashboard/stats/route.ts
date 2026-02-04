@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
 import { EstadoOrden, TipoServicio } from "@prisma/client";
+import { calcularSemaforo, type SemaforoColor } from "@/types/ordenes";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 // Labels para tipos de servicio
 const SERVICE_TYPE_LABELS: Record<TipoServicio, string> = {
@@ -175,65 +177,40 @@ export async function GET() {
     }
 
     // 5. Datos del semáforo (órdenes activas categorizadas)
+    // Usamos calcularSemaforo para consistencia con la lista de órdenes
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
-    const hace3Dias = new Date(hoy);
-    hace3Dias.setDate(hace3Dias.getDate() - 3);
-
-    const hace5Dias = new Date(hoy);
-    hace5Dias.setDate(hace5Dias.getDate() - 5);
-
-    // Rojo: Equipo listo > 5 días sin recoger
-    const rojoCount = await prisma.orden.count({
-      where: {
-        estado: "REPARADO",
-        updatedAt: { lt: hace5Dias },
-      },
-    });
-
-    // Naranja: Esperando refacciones
-    const naranjaCount = await prisma.orden.count({
-      where: {
-        estado: "ESPERA_REFACCIONES",
-      },
-    });
-
-    // Amarillo: Sin cotización > 72h (en diagnóstico por más de 3 días)
-    const amarilloCount = await prisma.orden.count({
-      where: {
-        estado: "EN_DIAGNOSTICO",
-        updatedAt: { lt: hace3Dias },
-      },
-    });
-
-    // Verde: En proceso sin alertas
-    const verdeCount = await prisma.orden.count({
-      where: {
-        estado: { in: ["EN_REPARACION", "COTIZACION_PENDIENTE", "LISTO_ENTREGA"] },
-      },
-    });
-
-    // Azul: Recibidos hoy
     const mananaDate = new Date(hoy);
     mananaDate.setDate(mananaDate.getDate() + 1);
 
-    const azulCount = await prisma.orden.count({
+    // Fetch todas las órdenes activas para calcular semáforo
+    const ordenesParaSemaforo = await prisma.orden.findMany({
       where: {
-        estado: "RECIBIDO",
-        fechaRecepcion: {
-          gte: hoy,
-          lt: mananaDate,
-        },
+        estado: { notIn: ["ENTREGADO", "CANCELADO"] },
       },
     });
 
+    // Contar por color usando la misma función que usa la lista
+    const conteoSemaforo: Record<SemaforoColor, number> = {
+      ROJO: 0,
+      NARANJA: 0,
+      AMARILLO: 0,
+      AZUL: 0,
+      VERDE: 0,
+    };
+
+    ordenesParaSemaforo.forEach((orden) => {
+      const color = calcularSemaforo(orden);
+      conteoSemaforo[color]++;
+    });
+
     const semaforo = [
-      { color: "rojo", label: "Crítico", count: rojoCount, description: "Equipo listo > 5 días sin recoger" },
-      { color: "naranja", label: "Urgente", count: naranjaCount, description: "Esperando refacciones" },
-      { color: "amarillo", label: "Atención", count: amarilloCount, description: "Sin cotización > 72h" },
-      { color: "verde", label: "Normal", count: verdeCount, description: "En proceso sin alertas" },
-      { color: "azul", label: "Nuevos", count: azulCount, description: "Recibidos hoy" },
+      { color: "rojo", label: "Crítico", count: conteoSemaforo.ROJO, description: "Listo para entrega > 5 días sin recoger" },
+      { color: "naranja", label: "Urgente", count: conteoSemaforo.NARANJA, description: "Esperando refacciones" },
+      { color: "amarillo", label: "Atención", count: conteoSemaforo.AMARILLO, description: "En diagnóstico o cotización > 72h" },
+      { color: "verde", label: "Normal", count: conteoSemaforo.VERDE, description: "En proceso sin alertas" },
+      { color: "azul", label: "Nuevos", count: conteoSemaforo.AZUL, description: "Recibidos hoy" },
     ];
 
     // 6. Stats cards data
@@ -294,25 +271,8 @@ export async function GET() {
     });
 
     const ordenesRecientesFormateadas = ordenesRecientes.map((orden) => {
-      // Calcular semáforo
-      let semaforo = "verde";
-      const diasDesdeActualizacion = Math.floor(
-        (hoy.getTime() - new Date(orden.updatedAt).getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      if (orden.estado === "REPARADO" && diasDesdeActualizacion > 5) {
-        semaforo = "rojo";
-      } else if (orden.estado === "ESPERA_REFACCIONES") {
-        semaforo = "naranja";
-      } else if (orden.estado === "EN_DIAGNOSTICO" && diasDesdeActualizacion > 3) {
-        semaforo = "amarillo";
-      } else if (orden.estado === "RECIBIDO") {
-        const fechaRecepcion = new Date(orden.fechaRecepcion);
-        fechaRecepcion.setHours(0, 0, 0, 0);
-        if (fechaRecepcion.getTime() === hoy.getTime()) {
-          semaforo = "azul";
-        }
-      }
+      // Usar calcularSemaforo para consistencia con la lista de órdenes
+      const semaforoColor = calcularSemaforo(orden).toLowerCase();
 
       return {
         id: orden.id,
@@ -322,7 +282,7 @@ export async function GET() {
         tipo: orden.tipoServicio.toLowerCase().replace("_", ""),
         tipoServicio: orden.tipoServicio,
         estado: orden.estado,
-        semaforo,
+        semaforo: semaforoColor,
       };
     });
 
