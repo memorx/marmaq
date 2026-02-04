@@ -134,8 +134,6 @@ export async function crearOrdenConFolio<T extends Prisma.OrdenInclude>(
 ): Promise<Prisma.OrdenGetPayload<{ include: T }>> {
   const { tx, orderData, include } = options;
 
-  let lastError: unknown;
-
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       // Generate a new folio (re-query on each attempt to get the latest)
@@ -152,7 +150,6 @@ export async function crearOrdenConFolio<T extends Prisma.OrdenInclude>(
 
       return orden;
     } catch (error) {
-      lastError = error;
 
       // Only retry on unique constraint violations
       if (!isUniqueConstraintError(error)) {
@@ -188,15 +185,12 @@ export async function generarFolioConRetry<TResult>(
   tx: TransactionClient,
   createFn: (folio: string) => Promise<TResult>
 ): Promise<{ result: TResult; folio: string; attempts: number }> {
-  let lastError: unknown;
-
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       const folio = await consultarSiguienteFolio(tx);
       const result = await createFn(folio);
       return { result, folio, attempts: attempt + 1 };
     } catch (error) {
-      lastError = error;
 
       if (!isUniqueConstraintError(error)) {
         throw error;
