@@ -9,6 +9,13 @@ import {
   type UpdateOrdenInput,
 } from "@/types/ordenes";
 import { Prisma, EstadoOrden, AccionHistorial } from "@prisma/client";
+import {
+  notificarCambioEstado,
+  notificarTecnicoReasignado,
+  notificarPrioridadUrgente,
+  notificarCotizacionModificada,
+  notificarOrdenCancelada,
+} from "@/lib/notificaciones/notification-triggers";
 
 type RouteParams = Promise<{ id: string }>;
 
@@ -355,6 +362,54 @@ export async function PATCH(
       return orden;
     });
 
+    // Disparar notificaciones (fire-and-forget, no bloquea el response)
+    const ordenParaNotif = {
+      id: ordenActualizada.id,
+      folio: ordenActualizada.folio,
+      tecnicoId: ordenActualizada.tecnicoId,
+      marcaEquipo: ordenActualizada.marcaEquipo,
+      modeloEquipo: ordenActualizada.modeloEquipo,
+    };
+
+    // Trigger 2: Estado cambiado
+    if (estadoCambiado && body.estado) {
+      notificarCambioEstado(
+        ordenParaNotif,
+        ordenActual.estado,
+        body.estado,
+        session.user.id
+      ).catch(() => {});
+    }
+
+    // Trigger 4: Técnico reasignado
+    if (tecnicoCambiado) {
+      notificarTecnicoReasignado(
+        ordenParaNotif,
+        ordenActual.tecnicoId,
+        body.tecnicoId ?? null,
+        session.user.id
+      ).catch(() => {});
+    }
+
+    // Trigger 5: Prioridad → URGENTE
+    if (body.prioridad === "URGENTE" && ordenActual.prioridad !== "URGENTE") {
+      notificarPrioridadUrgente(ordenParaNotif, session.user.id).catch(() => {});
+    }
+
+    // Trigger 6: Cotización modificada (no nueva, sino cambiada)
+    if (body.cotizacion !== undefined && ordenActual.cotizacion !== null) {
+      const montoAnterior = Number(ordenActual.cotizacion);
+      const montoNuevo = Number(body.cotizacion);
+      if (montoAnterior !== montoNuevo) {
+        notificarCotizacionModificada(
+          ordenParaNotif,
+          montoAnterior,
+          montoNuevo,
+          session.user.id
+        ).catch(() => {});
+      }
+    }
+
     // Agregar semáforo calculado
     const ordenConSemaforo = {
       ...ordenActualizada,
@@ -414,10 +469,17 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Verificar que la orden existe
+    // Verificar que la orden existe y obtener datos para notificación
     const orden = await prisma.orden.findUnique({
       where: { id },
-      select: { id: true, estado: true },
+      select: {
+        id: true,
+        estado: true,
+        folio: true,
+        tecnicoId: true,
+        marcaEquipo: true,
+        modeloEquipo: true,
+      },
     });
 
     if (!orden) {
@@ -452,6 +514,19 @@ export async function DELETE(
         },
       });
     });
+
+    // Disparar notificación de cancelación (fire-and-forget)
+    notificarOrdenCancelada(
+      {
+        id: orden.id,
+        folio: orden.folio,
+        tecnicoId: orden.tecnicoId,
+        marcaEquipo: orden.marcaEquipo,
+        modeloEquipo: orden.modeloEquipo,
+        estado: orden.estado,
+      },
+      session.user.id
+    ).catch(() => {});
 
     return NextResponse.json({ message: "Orden cancelada exitosamente" });
   } catch (error) {

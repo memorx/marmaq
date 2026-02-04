@@ -17,6 +17,7 @@ import {
   crearOrdenConFolio,
   FolioGenerationError,
 } from "@/lib/utils/folio-generator";
+import { notificarOrdenCreada } from "@/lib/notificaciones/notification-triggers";
 
 // ============ GET /api/ordenes ============
 // Lista órdenes con filtros, paginación y cálculo de semáforo
@@ -289,6 +290,18 @@ export async function POST(request: NextRequest) {
 
       return nuevaOrden;
     });
+
+    // Disparar notificación (fire-and-forget, no bloquea el response)
+    notificarOrdenCreada(
+      {
+        id: orden.id,
+        folio: orden.folio,
+        tecnicoId: orden.tecnicoId,
+        marcaEquipo: orden.marcaEquipo,
+        modeloEquipo: orden.modeloEquipo,
+      },
+      session.user.id
+    ).catch(() => {}); // Silenciar errores — best effort
 
     return NextResponse.json(orden, { status: 201 });
   } catch (error) {

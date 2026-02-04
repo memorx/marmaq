@@ -20,6 +20,7 @@ model User {
   ordenesCreadas    Orden[]   @relation("CreadoPor")
   historialCambios  HistorialEstado[]
   historialOrdenes  HistorialOrden[]
+  notificaciones    Notificacion[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -116,6 +117,7 @@ model Orden {
   historial       HistorialEstado[]
   historialOrden  HistorialOrden[]
   notificacionesWA NotificacionWhatsApp[]
+  notificaciones  Notificacion[]
 
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -343,4 +345,57 @@ model Configuracion {
   descripcion String?
 
   updatedAt   DateTime  @updatedAt
+}
+
+// ============ NOTIFICACIONES INTERNAS ============
+model Notificacion {
+  id            String              @id @default(cuid())
+
+  // Destinatario
+  usuarioId     String
+  usuario       User                @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  // Orden relacionada (opcional — algunas notificaciones pueden no tener orden)
+  ordenId       String?
+  orden         Orden?              @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+
+  // Contenido
+  tipo          TipoNotificacion
+  titulo        String
+  mensaje       String              @db.Text
+  prioridad     PrioridadNotif      @default(NORMAL)
+
+  // Estado
+  leida         Boolean             @default(false)
+  fechaLeida    DateTime?
+
+  createdAt     DateTime            @default(now())
+
+  @@index([usuarioId, leida])
+  @@index([usuarioId, createdAt])
+  @@index([ordenId])
+}
+
+enum TipoNotificacion {
+  // Por evento (instantáneo)
+  ORDEN_CREADA
+  ESTADO_CAMBIADO
+  ORDEN_CANCELADA
+  TECNICO_REASIGNADO
+  PRIORIDAD_URGENTE
+  COTIZACION_MODIFICADA
+
+  // Por tiempo (cron)
+  ALERTA_ROJO            // +5 días sin recoger
+  ALERTA_AMARILLO        // +72h sin cotización
+
+  // Inventario
+  STOCK_BAJO
+}
+
+enum PrioridadNotif {
+  BAJA
+  NORMAL
+  ALTA
+  URGENTE
 }

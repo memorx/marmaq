@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Bell,
   Search,
   FileText,
   Users,
@@ -13,6 +12,7 @@ import {
   AlertTriangle,
   Menu,
 } from "lucide-react";
+import { NotificacionDropdown } from "@/components/notificaciones/NotificacionDropdown";
 
 interface HeaderProps {
   title: string;
@@ -362,10 +362,7 @@ export function Header({ title, subtitle, onMenuClick, rightContent }: HeaderPro
           {rightContent}
 
           {/* Notifications */}
-          <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
-            <Bell size={20} />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
+          <NotificacionDropdown />
         </div>
       </header>
 
