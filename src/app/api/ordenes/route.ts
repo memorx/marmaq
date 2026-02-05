@@ -102,8 +102,12 @@ export async function GET(request: NextRequest) {
     const pageSize = Math.min(filters.pageSize || 20, 100); // Max 100
     const skip = (page - 1) * pageSize;
 
-    // Ejecutar queries en paralelo
-    const [ordenes, total] = await Promise.all([
+    // Si hay filtro de semáforo, necesitamos obtener todas las órdenes primero
+    // porque el semáforo se calcula en memoria, no en la BD
+    const hasSemaforoFilter = !!filters.semaforo;
+
+    // Ejecutar queries
+    const [ordenes, totalSinFiltroSemaforo] = await Promise.all([
       prisma.orden.findMany({
         where,
         include: {
@@ -131,8 +135,8 @@ export async function GET(request: NextRequest) {
           { prioridad: "desc" },
           { fechaRecepcion: "desc" },
         ],
-        skip,
-        take: pageSize,
+        // Solo aplicar paginación en BD si NO hay filtro de semáforo
+        ...(hasSemaforoFilter ? {} : { skip, take: pageSize }),
       }),
       prisma.orden.count({ where }),
     ]);
@@ -143,11 +147,18 @@ export async function GET(request: NextRequest) {
       semaforo: calcularSemaforo(orden),
     }));
 
-    // Filtrar por semáforo si se especificó
-    if (filters.semaforo) {
+    let total = totalSinFiltroSemaforo;
+
+    // Si hay filtro de semáforo, filtrar y paginar en memoria
+    if (hasSemaforoFilter) {
+      // Filtrar por semáforo
       ordenesConSemaforo = ordenesConSemaforo.filter(
         (orden) => orden.semaforo === filters.semaforo
       );
+      // Actualizar total con el conteo filtrado
+      total = ordenesConSemaforo.length;
+      // Aplicar paginación manualmente
+      ordenesConSemaforo = ordenesConSemaforo.slice(skip, skip + pageSize);
     }
 
     const response: OrdenesListResponse = {

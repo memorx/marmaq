@@ -12,8 +12,10 @@ function getSupabaseClient(): SupabaseClient {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn("Supabase credentials not configured");
-    // Return a dummy client that will fail gracefully at runtime
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("CRITICAL: Supabase credentials not configured in production!");
+    }
+    console.warn("Supabase credentials not configured - using placeholder for development");
     return createClient("https://placeholder.supabase.co", "placeholder-key");
   }
 
