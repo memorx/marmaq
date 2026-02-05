@@ -68,7 +68,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (filters.tecnicoId) {
-      where.tecnicoId = filters.tecnicoId;
+      // Si es TECNICO, ignorar el filtro manual (ya está forzado por RBAC arriba)
+      if (userRole !== "TECNICO") {
+        where.tecnicoId = filters.tecnicoId;
+      }
     }
 
     if (filters.clienteId) {
