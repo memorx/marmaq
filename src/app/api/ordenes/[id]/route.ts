@@ -14,6 +14,14 @@ import {
   notificarCotizacionModificada,
   notificarOrdenCancelada,
 } from "@/lib/notificaciones/notification-triggers";
+import {
+  checkRole,
+  unauthorizedResponse,
+  canAccessOrden,
+  getUserRole,
+  canTecnicoUpdateFields,
+  canRefaccionesUpdateOrden,
+} from "@/lib/auth/authorize";
 
 type RouteParams = Promise<{ id: string }>;
 
@@ -72,6 +80,11 @@ export async function GET(
       );
     }
 
+    // RBAC: Verificar que el usuario puede acceder a esta orden
+    if (!canAccessOrden(session, orden)) {
+      return unauthorizedResponse("No tienes permisos para ver esta orden");
+    }
+
     // Agregar semáforo calculado
     const ordenConSemaforo = {
       ...orden,
@@ -118,6 +131,7 @@ export async function PATCH(
         id: true,
         estado: true,
         tecnicoId: true,
+        tipoServicio: true,
         cotizacion: true,
         cotizacionAprobada: true,
         diagnostico: true,
@@ -131,6 +145,41 @@ export async function PATCH(
         { error: "Orden no encontrada" },
         { status: 404 }
       );
+    }
+
+    // RBAC: Verificar permisos de actualización según rol
+    const userRole = getUserRole(session);
+
+    // SUPER_ADMIN y COORD_SERVICIO pueden actualizar todo
+    if (userRole !== "SUPER_ADMIN" && userRole !== "COORD_SERVICIO") {
+      // TECNICO: solo puede actualizar órdenes asignadas a él y campos específicos
+      if (userRole === "TECNICO") {
+        // Verificar que la orden está asignada a este técnico
+        if (ordenActual.tecnicoId !== session.user.id) {
+          return unauthorizedResponse("Solo puedes actualizar órdenes asignadas a ti");
+        }
+
+        // Verificar que solo actualiza campos permitidos
+        const updateFields = Object.keys(body).filter(
+          (key) => body[key as keyof typeof body] !== undefined
+        );
+        const { allowed, forbiddenFields } = canTecnicoUpdateFields(updateFields, ordenActual);
+
+        if (!allowed) {
+          return unauthorizedResponse(
+            `No tienes permisos para actualizar los campos: ${forbiddenFields.join(", ")}`
+          );
+        }
+      }
+
+      // REFACCIONES: solo puede actualizar órdenes en estado ESPERA_REFACCIONES
+      if (userRole === "REFACCIONES") {
+        if (!canRefaccionesUpdateOrden(ordenActual)) {
+          return unauthorizedResponse(
+            "Solo puedes actualizar órdenes en estado Espera Refacciones"
+          );
+        }
+      }
     }
 
     // Preparar datos de actualización
@@ -471,6 +520,11 @@ export async function DELETE(
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    // RBAC: Solo SUPER_ADMIN y COORD_SERVICIO pueden cancelar órdenes
+    if (!checkRole(session, ["SUPER_ADMIN", "COORD_SERVICIO"])) {
+      return unauthorizedResponse("No tienes permisos para cancelar órdenes");
     }
 
     const { id } = await params;

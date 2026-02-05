@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import type { UpdateOrdenInput } from "@/types/ordenes";
-import type { EstadoOrden, Prioridad, CondicionEquipo } from "@prisma/client";
+import type { EstadoOrden, Prioridad, CondicionEquipo, Role } from "@prisma/client";
+import type { Session } from "next-auth";
+import {
+  checkRole,
+  canAccessOrden,
+  getUserRole,
+  canTecnicoUpdateFields,
+  canRefaccionesUpdateOrden,
+} from "@/lib/auth/authorize";
 
 /**
  * Tests para validación de datos de actualización de órdenes
@@ -295,5 +303,255 @@ describe("Timestamps automáticos", () => {
     const estadoNuevo: EstadoOrden = "ENTREGADO";
     expect(estadoNuevo).toBe("ENTREGADO");
     // El timestamp se setea en el servidor, no en el cliente
+  });
+});
+
+// ============ RBAC (Control de Acceso por Roles) ============
+
+describe("RBAC - checkRole", () => {
+  const createSession = (role: Role): Session => ({
+    user: {
+      id: "user-123",
+      role,
+      email: "test@test.com",
+      name: "Test User",
+    },
+    expires: new Date(Date.now() + 86400000).toISOString(),
+  });
+
+  it("SUPER_ADMIN tiene acceso a roles de admin", () => {
+    const session = createSession("SUPER_ADMIN");
+    expect(checkRole(session, ["SUPER_ADMIN", "COORD_SERVICIO"])).toBe(true);
+  });
+
+  it("COORD_SERVICIO tiene acceso a roles de coordinador", () => {
+    const session = createSession("COORD_SERVICIO");
+    expect(checkRole(session, ["SUPER_ADMIN", "COORD_SERVICIO"])).toBe(true);
+  });
+
+  it("TECNICO no tiene acceso a roles de admin", () => {
+    const session = createSession("TECNICO");
+    expect(checkRole(session, ["SUPER_ADMIN", "COORD_SERVICIO"])).toBe(false);
+  });
+
+  it("REFACCIONES no tiene acceso a roles de admin", () => {
+    const session = createSession("REFACCIONES");
+    expect(checkRole(session, ["SUPER_ADMIN", "COORD_SERVICIO"])).toBe(false);
+  });
+
+  it("retorna false para sesión nula", () => {
+    expect(checkRole(null, ["SUPER_ADMIN"])).toBe(false);
+  });
+
+  it("retorna false para sesión sin usuario", () => {
+    const session = { expires: "" } as Session;
+    expect(checkRole(session, ["SUPER_ADMIN"])).toBe(false);
+  });
+});
+
+describe("RBAC - canAccessOrden", () => {
+  const createSession = (role: Role, userId = "user-123"): Session => ({
+    user: {
+      id: userId,
+      role,
+      email: "test@test.com",
+      name: "Test User",
+    },
+    expires: new Date(Date.now() + 86400000).toISOString(),
+  });
+
+  it("SUPER_ADMIN puede acceder a cualquier orden", () => {
+    const session = createSession("SUPER_ADMIN");
+    const orden = { tecnicoId: "otro-tecnico" };
+    expect(canAccessOrden(session, orden)).toBe(true);
+  });
+
+  it("COORD_SERVICIO puede acceder a cualquier orden", () => {
+    const session = createSession("COORD_SERVICIO");
+    const orden = { tecnicoId: "otro-tecnico" };
+    expect(canAccessOrden(session, orden)).toBe(true);
+  });
+
+  it("REFACCIONES puede ver cualquier orden", () => {
+    const session = createSession("REFACCIONES");
+    const orden = { tecnicoId: "otro-tecnico" };
+    expect(canAccessOrden(session, orden)).toBe(true);
+  });
+
+  it("TECNICO puede acceder a órdenes asignadas a él", () => {
+    const session = createSession("TECNICO", "tecnico-123");
+    const orden = { tecnicoId: "tecnico-123" };
+    expect(canAccessOrden(session, orden)).toBe(true);
+  });
+
+  it("TECNICO NO puede acceder a órdenes de otros técnicos", () => {
+    const session = createSession("TECNICO", "tecnico-123");
+    const orden = { tecnicoId: "otro-tecnico" };
+    expect(canAccessOrden(session, orden)).toBe(false);
+  });
+
+  it("TECNICO NO puede acceder a órdenes sin técnico asignado", () => {
+    const session = createSession("TECNICO", "tecnico-123");
+    const orden = { tecnicoId: null };
+    expect(canAccessOrden(session, orden)).toBe(false);
+  });
+});
+
+describe("RBAC - getUserRole", () => {
+  it("retorna el rol del usuario", () => {
+    const session: Session = {
+      user: {
+        id: "user-123",
+        role: "COORD_SERVICIO",
+        email: "test@test.com",
+        name: "Test",
+      },
+      expires: "",
+    };
+    expect(getUserRole(session)).toBe("COORD_SERVICIO");
+  });
+
+  it("retorna TECNICO como fallback si no hay rol", () => {
+    const session: Session = {
+      user: {
+        id: "user-123",
+        email: "test@test.com",
+        name: "Test",
+      },
+      expires: "",
+    };
+    expect(getUserRole(session)).toBe("TECNICO");
+  });
+
+  it("retorna TECNICO para sesión nula", () => {
+    expect(getUserRole(null)).toBe("TECNICO");
+  });
+});
+
+describe("RBAC - canTecnicoUpdateFields", () => {
+  it("permite actualizar diagnóstico", () => {
+    const orden = { tipoServicio: "GARANTIA" };
+    const result = canTecnicoUpdateFields(["diagnostico"], orden);
+    expect(result.allowed).toBe(true);
+    expect(result.forbiddenFields).toEqual([]);
+  });
+
+  it("permite actualizar notasTecnico", () => {
+    const orden = { tipoServicio: "GARANTIA" };
+    const result = canTecnicoUpdateFields(["notasTecnico"], orden);
+    expect(result.allowed).toBe(true);
+  });
+
+  it("permite actualizar cotización solo para POR_COBRAR", () => {
+    const ordenPorCobrar = { tipoServicio: "POR_COBRAR" };
+    const result = canTecnicoUpdateFields(["cotizacion"], ordenPorCobrar);
+    expect(result.allowed).toBe(true);
+  });
+
+  it("NO permite actualizar cotización para GARANTIA", () => {
+    const ordenGarantia = { tipoServicio: "GARANTIA" };
+    const result = canTecnicoUpdateFields(["cotizacion"], ordenGarantia);
+    expect(result.allowed).toBe(false);
+    expect(result.forbiddenFields).toContain("cotizacion");
+  });
+
+  it("NO permite actualizar estado", () => {
+    const orden = { tipoServicio: "GARANTIA" };
+    const result = canTecnicoUpdateFields(["estado"], orden);
+    expect(result.allowed).toBe(false);
+    expect(result.forbiddenFields).toContain("estado");
+  });
+
+  it("NO permite actualizar prioridad", () => {
+    const orden = { tipoServicio: "GARANTIA" };
+    const result = canTecnicoUpdateFields(["prioridad"], orden);
+    expect(result.allowed).toBe(false);
+    expect(result.forbiddenFields).toContain("prioridad");
+  });
+
+  it("NO permite actualizar tecnicoId", () => {
+    const orden = { tipoServicio: "GARANTIA" };
+    const result = canTecnicoUpdateFields(["tecnicoId"], orden);
+    expect(result.allowed).toBe(false);
+    expect(result.forbiddenFields).toContain("tecnicoId");
+  });
+
+  it("detecta múltiples campos prohibidos", () => {
+    const orden = { tipoServicio: "GARANTIA" };
+    const result = canTecnicoUpdateFields(["estado", "prioridad", "diagnostico"], orden);
+    expect(result.allowed).toBe(false);
+    expect(result.forbiddenFields).toContain("estado");
+    expect(result.forbiddenFields).toContain("prioridad");
+    expect(result.forbiddenFields).not.toContain("diagnostico");
+  });
+});
+
+describe("RBAC - canRefaccionesUpdateOrden", () => {
+  it("permite actualizar órdenes en ESPERA_REFACCIONES", () => {
+    const orden = { estado: "ESPERA_REFACCIONES" };
+    expect(canRefaccionesUpdateOrden(orden)).toBe(true);
+  });
+
+  it("NO permite actualizar órdenes en RECIBIDO", () => {
+    const orden = { estado: "RECIBIDO" };
+    expect(canRefaccionesUpdateOrden(orden)).toBe(false);
+  });
+
+  it("NO permite actualizar órdenes en EN_REPARACION", () => {
+    const orden = { estado: "EN_REPARACION" };
+    expect(canRefaccionesUpdateOrden(orden)).toBe(false);
+  });
+
+  it("NO permite actualizar órdenes en ENTREGADO", () => {
+    const orden = { estado: "ENTREGADO" };
+    expect(canRefaccionesUpdateOrden(orden)).toBe(false);
+  });
+});
+
+describe("RBAC - Permisos de creación de órdenes", () => {
+  // Estos tests documentan el comportamiento esperado del endpoint POST /api/ordenes
+
+  it("SUPER_ADMIN puede crear órdenes", () => {
+    const rolesPermitidos: Role[] = ["SUPER_ADMIN", "COORD_SERVICIO", "REFACCIONES"];
+    expect(rolesPermitidos.includes("SUPER_ADMIN")).toBe(true);
+  });
+
+  it("COORD_SERVICIO puede crear órdenes", () => {
+    const rolesPermitidos: Role[] = ["SUPER_ADMIN", "COORD_SERVICIO", "REFACCIONES"];
+    expect(rolesPermitidos.includes("COORD_SERVICIO")).toBe(true);
+  });
+
+  it("REFACCIONES puede crear órdenes", () => {
+    const rolesPermitidos: Role[] = ["SUPER_ADMIN", "COORD_SERVICIO", "REFACCIONES"];
+    expect(rolesPermitidos.includes("REFACCIONES")).toBe(true);
+  });
+
+  it("TECNICO NO puede crear órdenes", () => {
+    const rolesPermitidos: Role[] = ["SUPER_ADMIN", "COORD_SERVICIO", "REFACCIONES"];
+    expect(rolesPermitidos.includes("TECNICO")).toBe(false);
+  });
+});
+
+describe("RBAC - Permisos de cancelación de órdenes", () => {
+  // Estos tests documentan el comportamiento esperado del endpoint DELETE /api/ordenes/[id]
+
+  it("SUPER_ADMIN puede cancelar órdenes", () => {
+    const rolesPermitidos: Role[] = ["SUPER_ADMIN", "COORD_SERVICIO"];
+    expect(rolesPermitidos.includes("SUPER_ADMIN")).toBe(true);
+  });
+
+  it("COORD_SERVICIO puede cancelar órdenes", () => {
+    const rolesPermitidos: Role[] = ["SUPER_ADMIN", "COORD_SERVICIO"];
+    expect(rolesPermitidos.includes("COORD_SERVICIO")).toBe(true);
+  });
+
+  it("TECNICO NO puede cancelar órdenes", () => {
+    const rolesPermitidos: Role[] = ["SUPER_ADMIN", "COORD_SERVICIO"];
+    expect(rolesPermitidos.includes("TECNICO")).toBe(false);
+  });
+
+  it("REFACCIONES NO puede cancelar órdenes", () => {
+    const rolesPermitidos: Role[] = ["SUPER_ADMIN", "COORD_SERVICIO"];
+    expect(rolesPermitidos.includes("REFACCIONES")).toBe(false);
   });
 });

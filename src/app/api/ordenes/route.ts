@@ -18,6 +18,7 @@ import {
 } from "@/lib/utils/folio-generator";
 import { notificarOrdenCreada } from "@/lib/notificaciones/notification-triggers";
 import { CreateOrdenSchema } from "@/lib/validators/ordenes";
+import { checkRole, unauthorizedResponse, getUserRole } from "@/lib/auth/authorize";
 
 // ============ GET /api/ordenes ============
 // Lista órdenes con filtros, paginación y cálculo de semáforo
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const userRole = getUserRole(session);
 
     // Parsear filtros
     const filters: OrdenesFilters = {
@@ -47,6 +49,11 @@ export async function GET(request: NextRequest) {
 
     // Construir where clause
     const where: Prisma.OrdenWhereInput = {};
+
+    // RBAC: TECNICO solo puede ver sus órdenes asignadas
+    if (userRole === "TECNICO") {
+      where.tecnicoId = session.user.id;
+    }
 
     if (filters.tipoServicio) {
       where.tipoServicio = filters.tipoServicio;
@@ -170,6 +177,11 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    // RBAC: Solo SUPER_ADMIN, COORD_SERVICIO y REFACCIONES pueden crear órdenes
+    if (!checkRole(session, ["SUPER_ADMIN", "COORD_SERVICIO", "REFACCIONES"])) {
+      return unauthorizedResponse("No tienes permisos para crear órdenes");
     }
 
     const rawBody = await request.json();
