@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
 import { Prisma } from "@prisma/client";
+import { UpdateMaterialSchema } from "@/lib/validators/materiales";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 type RouteParams = Promise<{ id: string }>;
-
-const CATEGORIAS_VALIDAS = ["REFACCION", "CONSUMIBLE", "HERRAMIENTA"];
 
 // GET /api/materiales/[id] - Obtener un material por ID
 export async function GET(
@@ -98,7 +97,15 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const body = await request.json();
+    const rawBody = await request.json();
+    const parsed = UpdateMaterialSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Datos inválidos", details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parsed.data;
 
     // Verificar que el material existe
     const materialExistente = await prisma.material.findUnique({
@@ -110,14 +117,6 @@ export async function PATCH(
       return NextResponse.json(
         { error: "Material no encontrado" },
         { status: 404 }
-      );
-    }
-
-    // Validar categoría si se proporciona
-    if (body.categoria && !CATEGORIAS_VALIDAS.includes(body.categoria)) {
-      return NextResponse.json(
-        { error: `Categoría inválida. Válidas: ${CATEGORIAS_VALIDAS.join(", ")}` },
-        { status: 400 }
       );
     }
 

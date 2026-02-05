@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { FileSpreadsheet, Download, Loader2, FileText, Calendar, Filter, BarChart3, ArrowRight } from "lucide-react";
+import { STATUS_LABELS } from "@/lib/constants/labels";
+import type { EstadoOrden } from "@/types/ordenes";
 
 type TipoReporte = "TORREY" | "FABATSA" | "REPARE";
 
@@ -10,7 +12,7 @@ interface ReportePreview {
   tipo: string;
   periodo: string;
   totalOrdenes: number;
-  resumenEstados: { estado: string; cantidad: number }[];
+  resumenEstados: { estado: EstadoOrden; cantidad: number }[];
 }
 
 const TIPOS_REPORTE: { value: TipoReporte; label: string; description: string }[] = [
@@ -35,18 +37,6 @@ const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
-
-const STATUS_LABELS: Record<string, string> = {
-  RECIBIDO: "Recibido",
-  EN_DIAGNOSTICO: "En Diagnóstico",
-  ESPERA_REFACCIONES: "Espera Refacciones",
-  COTIZACION_PENDIENTE: "Cotización Pendiente",
-  EN_REPARACION: "En Reparación",
-  REPARADO: "Reparado",
-  LISTO_ENTREGA: "Listo para Entrega",
-  ENTREGADO: "Entregado",
-  CANCELADO: "Cancelado",
-};
 
 export default function ReportesPage() {
   const currentDate = new Date();

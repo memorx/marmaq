@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
 import { Role, Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { CreateUsuarioSchema } from "@/lib/validators/usuarios";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -111,40 +112,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-
-    // Validar campos requeridos
-    if (!body.name || !body.email || !body.password) {
+    const rawBody = await request.json();
+    const parsed = CreateUsuarioSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Nombre, email y contraseña son requeridos" },
+        { error: "Datos inválidos", details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
-
-    // Validar email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.email)) {
-      return NextResponse.json(
-        { error: "Email inválido" },
-        { status: 400 }
-      );
-    }
-
-    // Validar contraseña (mínimo 6 caracteres)
-    if (body.password.length < 6) {
-      return NextResponse.json(
-        { error: "La contraseña debe tener al menos 6 caracteres" },
-        { status: 400 }
-      );
-    }
-
-    // Validar rol
-    if (body.role && !ROLES_VALIDOS.includes(body.role)) {
-      return NextResponse.json(
-        { error: `Rol inválido. Válidos: ${ROLES_VALIDOS.join(", ")}` },
-        { status: 400 }
-      );
-    }
+    const body = parsed.data;
 
     // Hashear contraseña
     const hashedPassword = await bcrypt.hash(body.password, 10);
@@ -155,8 +131,8 @@ export async function POST(request: NextRequest) {
         name: body.name.trim(),
         email: body.email.toLowerCase().trim(),
         password: hashedPassword,
-        role: body.role || "TECNICO",
-        activo: body.activo ?? true,
+        role: body.role,
+        activo: body.activo,
       },
       select: {
         id: true,

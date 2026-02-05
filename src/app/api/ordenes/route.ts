@@ -8,7 +8,6 @@ import {
   calcularSemaforo,
   type OrdenesListResponse,
   type OrdenesFilters,
-  type CreateOrdenInput,
   type OrdenListItem,
   type SemaforoColor,
 } from "@/types/ordenes";
@@ -18,6 +17,7 @@ import {
   FolioGenerationError,
 } from "@/lib/utils/folio-generator";
 import { notificarOrdenCreada } from "@/lib/notificaciones/notification-triggers";
+import { CreateOrdenSchema } from "@/lib/validators/ordenes";
 
 // ============ GET /api/ordenes ============
 // Lista órdenes con filtros, paginación y cálculo de semáforo
@@ -172,36 +172,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const body: CreateOrdenInput = await request.json();
-
-    // Validaciones básicas
-    if (!body.tipoServicio) {
+    const rawBody = await request.json();
+    const parsed = CreateOrdenSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "El tipo de servicio es requerido" },
+        { error: "Datos inválidos", details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
-
-    if (!body.clienteId && !body.clienteNuevo) {
-      return NextResponse.json(
-        { error: "Debe especificar un cliente existente o crear uno nuevo" },
-        { status: 400 }
-      );
-    }
-
-    if (!body.marcaEquipo || !body.modeloEquipo) {
-      return NextResponse.json(
-        { error: "Marca y modelo del equipo son requeridos" },
-        { status: 400 }
-      );
-    }
-
-    if (!body.fallaReportada) {
-      return NextResponse.json(
-        { error: "La descripción de la falla es requerida" },
-        { status: 400 }
-      );
-    }
+    const body = parsed.data;
 
     // Usar transacción para asegurar integridad
     const orden = await prisma.$transaction(async (tx) => {

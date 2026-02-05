@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
 import { Prisma } from "@prisma/client";
+import { CreateClienteSchema } from "@/lib/validators/clientes";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -93,15 +94,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const body = await request.json();
-
-    // Validar campos requeridos
-    if (!body.nombre || !body.telefono) {
+    const rawBody = await request.json();
+    const parsed = CreateClienteSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Nombre y teléfono son requeridos" },
+        { error: "Datos inválidos", details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const body = parsed.data;
 
     // Crear cliente
     const cliente = await prisma.cliente.create({
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
         email: body.email || null,
         direccion: body.direccion || null,
         ciudad: body.ciudad || null,
-        esDistribuidor: body.esDistribuidor || false,
+        esDistribuidor: body.esDistribuidor,
         codigoDistribuidor: body.codigoDistribuidor || null,
         notas: body.notas || null,
       },

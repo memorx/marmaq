@@ -1,32 +1,11 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
-import { EstadoOrden, TipoServicio } from "@prisma/client";
 import { calcularSemaforo, type SemaforoColor } from "@/types/ordenes";
+import { STATUS_LABELS, SERVICE_TYPE_LABELS } from "@/lib/constants/labels";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-// Labels para tipos de servicio
-const SERVICE_TYPE_LABELS: Record<TipoServicio, string> = {
-  GARANTIA: "Garantía",
-  CENTRO_SERVICIO: "Centro Servicio",
-  POR_COBRAR: "Por Cobrar",
-  REPARE: "REPARE",
-};
-
-// Labels para estados
-const STATUS_LABELS: Record<EstadoOrden, string> = {
-  RECIBIDO: "Recibido",
-  EN_DIAGNOSTICO: "En Diagnóstico",
-  COTIZACION_PENDIENTE: "Cotización Pendiente",
-  EN_REPARACION: "En Reparación",
-  ESPERA_REFACCIONES: "Espera Refacciones",
-  REPARADO: "Reparado",
-  LISTO_ENTREGA: "Listo para Entrega",
-  ENTREGADO: "Entregado",
-  CANCELADO: "Cancelado",
-};
 
 // ============ GET /api/dashboard/stats ============
 export async function GET() {

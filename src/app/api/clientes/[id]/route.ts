@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
 import { Prisma } from "@prisma/client";
+import { UpdateClienteSchema } from "@/lib/validators/clientes";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -72,7 +73,15 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const body = await request.json();
+    const rawBody = await request.json();
+    const parsed = UpdateClienteSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Datos inválidos", details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parsed.data;
 
     // Verificar que el cliente existe
     const clienteExistente = await prisma.cliente.findUnique({

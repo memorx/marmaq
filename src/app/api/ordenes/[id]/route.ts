@@ -4,11 +4,9 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
-import {
-  calcularSemaforo,
-  type UpdateOrdenInput,
-} from "@/types/ordenes";
+import { calcularSemaforo } from "@/types/ordenes";
 import { Prisma, EstadoOrden, AccionHistorial } from "@prisma/client";
+import { UpdateOrdenSchema } from "@/lib/validators/ordenes";
 import {
   notificarCambioEstado,
   notificarTecnicoReasignado,
@@ -103,7 +101,15 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const body: UpdateOrdenInput = await request.json();
+    const rawBody = await request.json();
+    const parsed = UpdateOrdenSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Datos inválidos", details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parsed.data;
 
     // Verificar que la orden existe y obtener valores actuales para comparar
     const ordenActual = await prisma.orden.findUnique({

@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
-import { Role, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { UpdateUsuarioSchema } from "@/lib/validators/usuarios";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 type RouteParams = Promise<{ id: string }>;
-
-const ROLES_VALIDOS: Role[] = ["SUPER_ADMIN", "COORD_SERVICIO", "REFACCIONES", "TECNICO"];
 
 // GET /api/usuarios/[id] - Obtener un usuario por ID
 export async function GET(
@@ -104,7 +103,15 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const body = await request.json();
+    const rawBody = await request.json();
+    const parsed = UpdateUsuarioSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Datos inválidos", details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parsed.data;
 
     // Verificar que el usuario existe
     const usuarioExistente = await prisma.user.findUnique({
@@ -136,33 +143,6 @@ export async function PATCH(
     if (id === session.user.id && body.activo === false) {
       return NextResponse.json(
         { error: "No puedes desactivar tu propia cuenta" },
-        { status: 400 }
-      );
-    }
-
-    // Validar email si se proporciona
-    if (body.email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(body.email)) {
-        return NextResponse.json(
-          { error: "Email inválido" },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Validar rol si se proporciona
-    if (body.role && !ROLES_VALIDOS.includes(body.role)) {
-      return NextResponse.json(
-        { error: `Rol inválido. Válidos: ${ROLES_VALIDOS.join(", ")}` },
-        { status: 400 }
-      );
-    }
-
-    // Validar contraseña si se proporciona
-    if (body.password && body.password.length < 6) {
-      return NextResponse.json(
-        { error: "La contraseña debe tener al menos 6 caracteres" },
         { status: 400 }
       );
     }

@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
 import { Prisma } from "@prisma/client";
+import { CreateMaterialSchema } from "@/lib/validators/materiales";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// Categorías válidas
+// Categorías válidas (usado para filtros en GET)
 const CATEGORIAS_VALIDAS = ["REFACCION", "CONSUMIBLE", "HERRAMIENTA"];
 
 // GET /api/materiales - Listar materiales con búsqueda, filtros y paginación
@@ -182,23 +183,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-
-    // Validar campos requeridos
-    if (!body.sku || !body.nombre) {
+    const rawBody = await request.json();
+    const parsed = CreateMaterialSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "SKU y nombre son requeridos" },
+        { error: "Datos inválidos", details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
-
-    // Validar categoría
-    if (body.categoria && !CATEGORIAS_VALIDAS.includes(body.categoria)) {
-      return NextResponse.json(
-        { error: `Categoría inválida. Válidas: ${CATEGORIAS_VALIDAS.join(", ")}` },
-        { status: 400 }
-      );
-    }
+    const body = parsed.data;
 
     // Crear material
     const material = await prisma.material.create({
@@ -206,12 +199,12 @@ export async function POST(request: NextRequest) {
         sku: body.sku.toUpperCase().trim(),
         nombre: body.nombre.trim(),
         descripcion: body.descripcion?.trim() || null,
-        categoria: body.categoria || "REFACCION",
-        stockActual: body.stockActual ?? 0,
-        stockMinimo: body.stockMinimo ?? 5,
+        categoria: body.categoria,
+        stockActual: body.stockActual,
+        stockMinimo: body.stockMinimo,
         precioCompra: body.precioCompra ?? null,
         precioVenta: body.precioVenta ?? null,
-        activo: body.activo ?? true,
+        activo: body.activo,
       },
     });
 
