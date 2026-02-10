@@ -34,6 +34,7 @@ import {
   Printer,
   Loader2,
   PenLine,
+  Share2,
 } from "lucide-react";
 
 // Orden de estados para el timeline
@@ -66,25 +67,33 @@ const ACCIONES_POR_ESTADO: Record<EstadoOrden, { label: string; nuevoEstado: Est
     { label: "Solicitar Refacción", nuevoEstado: "ESPERA_REFACCIONES", variant: "outline" },
     { label: "Iniciar Reparación", nuevoEstado: "EN_REPARACION", variant: "primary" },
     { label: "Enviar Cotización", nuevoEstado: "COTIZACION_PENDIENTE", variant: "secondary" },
+    { label: "\u2190 Regresar a Recibido", nuevoEstado: "RECIBIDO", variant: "outline" },
   ],
   ESPERA_REFACCIONES: [
     { label: "Piezas Recibidas", nuevoEstado: "EN_REPARACION", variant: "primary" },
+    { label: "\u2190 Regresar a Diagnóstico", nuevoEstado: "EN_DIAGNOSTICO", variant: "outline" },
   ],
   COTIZACION_PENDIENTE: [
     { label: "Cotización Aprobada", nuevoEstado: "EN_REPARACION", variant: "primary" },
     { label: "Cotización Rechazada", nuevoEstado: "CANCELADO", variant: "outline" },
+    { label: "\u2190 Regresar a Diagnóstico", nuevoEstado: "EN_DIAGNOSTICO", variant: "outline" },
   ],
   EN_REPARACION: [
     { label: "Marcar como Reparado", nuevoEstado: "REPARADO", variant: "primary" },
+    { label: "\u2190 Regresar a Diagnóstico", nuevoEstado: "EN_DIAGNOSTICO", variant: "outline" },
   ],
   REPARADO: [
     { label: "Listo para Entrega", nuevoEstado: "LISTO_ENTREGA", variant: "primary" },
+    { label: "\u2190 Regresar a Reparación", nuevoEstado: "EN_REPARACION", variant: "outline" },
   ],
   LISTO_ENTREGA: [
     { label: "Registrar Entrega", nuevoEstado: "ENTREGADO", variant: "primary" },
+    { label: "\u2190 Regresar a Reparado", nuevoEstado: "REPARADO", variant: "outline" },
   ],
   ENTREGADO: [],
-  CANCELADO: [],
+  CANCELADO: [
+    { label: "\u2190 Reabrir Orden", nuevoEstado: "RECIBIDO", variant: "outline" },
+  ],
 };
 
 function getBadgeVariant(tipo: TipoServicio): "garantia" | "centro" | "cobrar" | "repare" {
@@ -228,6 +237,7 @@ export default function OrdenDetallePage({ params }: PageProps) {
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [firmaModalOpen, setFirmaModalOpen] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [printMenuOpen, setPrintMenuOpen] = useState(false);
   const [pendingDelivery, setPendingDelivery] = useState(false);
 
   useEffect(() => {
@@ -304,13 +314,21 @@ export default function OrdenDetallePage({ params }: PageProps) {
     }
   };
 
-  const handleGeneratePdf = async () => {
+  useEffect(() => {
+    const handleClickOutside = () => setPrintMenuOpen(false);
+    if (printMenuOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [printMenuOpen]);
+
+  const handleGeneratePdf = async (tipo: "comprobante" | "completo" = "completo") => {
     if (!orden) return;
 
     setGeneratingPdf(true);
     try {
       const { id } = await params;
-      const response = await fetch(`/api/ordenes/${id}/pdf`);
+      const response = await fetch(`/api/ordenes/${id}/pdf?tipo=${tipo}`);
 
       if (!response.ok) {
         throw new Error("Error al generar el PDF");
@@ -331,6 +349,47 @@ export default function OrdenDetallePage({ params }: PageProps) {
     } finally {
       setGeneratingPdf(false);
     }
+  };
+
+  const handleCompartirWhatsApp = () => {
+    if (!orden) return;
+
+    // Construir accesorios como texto
+    let accesoriosTexto = "";
+    if (orden.accesorios) {
+      if (typeof orden.accesorios === "string") {
+        accesoriosTexto = orden.accesorios;
+      } else {
+        const acc = orden.accesorios as Record<string, boolean>;
+        const lista = Object.entries(acc).filter(([, v]) => v).map(([k]) => k);
+        accesoriosTexto = lista.join(", ");
+      }
+    }
+
+    const mensaje = [
+      `🔧 *MARMAQ - Estado de Servicio*`,
+      ``,
+      `📋 *Folio:* ${orden.folio}`,
+      `📅 *Fecha:* ${formatDate(orden.fechaRecepcion)}`,
+      ``,
+      `👤 *Cliente:* ${orden.cliente.nombre}`,
+      orden.cliente.empresa ? `🏢 *Empresa:* ${orden.cliente.empresa}` : null,
+      ``,
+      `⚙️ *Equipo:* ${orden.marcaEquipo} ${orden.modeloEquipo}`,
+      orden.serieEquipo ? `🔢 *Serie:* ${orden.serieEquipo}` : null,
+      accesoriosTexto ? `📦 *Accesorios:* ${accesoriosTexto}` : null,
+      ``,
+      `📊 *Estado actual:* ${STATUS_LABELS[orden.estado]}`,
+      `🔧 *Tipo de servicio:* ${SERVICE_TYPE_LABELS[orden.tipoServicio]}`,
+      ``,
+      `📝 *Falla reportada:* ${orden.fallaReportada}`,
+      ``,
+      `---`,
+      `MARMAQ Mexicaltzingo • Servicio Técnico`,
+    ].filter(Boolean).join("\n");
+
+    const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+    window.open(url, "_blank");
   };
 
   const getEstadoIndex = (estado: EstadoOrden): number => {
@@ -391,19 +450,55 @@ export default function OrdenDetallePage({ params }: PageProps) {
               <MessageCircle className="w-4 h-4" />
               <span className="hidden sm:inline">WhatsApp</span>
             </Button>
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPrintMenuOpen(!printMenuOpen);
+                }}
+                disabled={generatingPdf}
+                className="flex items-center gap-2"
+              >
+                {generatingPdf ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Printer className="w-4 h-4" />
+                )}
+                <span className="hidden sm:inline">Imprimir</span>
+              </Button>
+              {printMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[200px]">
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors"
+                    onClick={() => {
+                      setPrintMenuOpen(false);
+                      handleGeneratePdf("comprobante");
+                    }}
+                  >
+                    Comprobante (cliente)
+                  </button>
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors"
+                    onClick={() => {
+                      setPrintMenuOpen(false);
+                      handleGeneratePdf("completo");
+                    }}
+                  >
+                    Reporte completo (interno)
+                  </button>
+                </div>
+              )}
+            </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={handleGeneratePdf}
-              disabled={generatingPdf}
+              onClick={handleCompartirWhatsApp}
               className="flex items-center gap-2"
             >
-              {generatingPdf ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Printer className="w-4 h-4" />
-              )}
-              <span className="hidden sm:inline">Imprimir</span>
+              <Share2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Compartir</span>
             </Button>
             <Button
               variant="outline"

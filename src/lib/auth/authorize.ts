@@ -32,7 +32,7 @@ export function unauthorizedResponse(message?: string): NextResponse {
  */
 export function canAccessOrden(
   session: Session | null,
-  orden: { tecnicoId: string | null }
+  orden: { tecnicoId: string | null; creadoPorId?: string | null }
 ): boolean {
   if (!session?.user) {
     return false;
@@ -53,6 +53,11 @@ export function canAccessOrden(
   // TECNICO solo puede acceder a órdenes asignadas a él
   if (role === "TECNICO") {
     return orden.tecnicoId === session.user.id;
+  }
+
+  // VENDEDOR solo puede acceder a órdenes que él creó
+  if (role === "VENDEDOR") {
+    return orden.creadoPorId === session.user.id;
   }
 
   // Por defecto, denegar acceso

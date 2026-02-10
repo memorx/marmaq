@@ -40,59 +40,60 @@ describe("consultarSiguienteFolio", () => {
     vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
   });
 
-  it("genera OS-{YEAR}-0001 cuando no hay órdenes previas", async () => {
+  it("genera OS-{YEAR}-{MM}-001 cuando no hay órdenes previas", async () => {
     const mockTx = createMockTx();
     mockTx.orden.findFirst.mockResolvedValue(null);
 
     const folio = await consultarSiguienteFolio(mockTx);
 
-    expect(folio).toBe("OS-2025-0001");
+    expect(folio).toBe("OS-2025-06-001");
     expect(mockTx.orden.findFirst).toHaveBeenCalledWith({
-      where: { folio: { startsWith: "OS-2025-" } },
+      where: { folio: { startsWith: "OS-2025-06-" } },
       orderBy: { folio: "desc" },
       select: { folio: true },
     });
   });
 
-  it("incrementa correctamente el número: 0001 → 0002", async () => {
+  it("incrementa correctamente el número: 001 → 002", async () => {
     const mockTx = createMockTx();
-    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-0001" });
+    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-06-001" });
 
     const folio = await consultarSiguienteFolio(mockTx);
 
-    expect(folio).toBe("OS-2025-0002");
+    expect(folio).toBe("OS-2025-06-002");
   });
 
-  it("maneja números altos correctamente: 0999 → 1000", async () => {
+  it("maneja números altos correctamente: 999 → 1000", async () => {
     const mockTx = createMockTx();
-    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-0999" });
+    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-06-999" });
 
     const folio = await consultarSiguienteFolio(mockTx);
 
-    expect(folio).toBe("OS-2025-1000");
+    expect(folio).toBe("OS-2025-06-1000");
   });
 
-  it("maneja el padding a 4 dígitos", async () => {
+  it("maneja el padding a 3 dígitos", async () => {
     const mockTx = createMockTx();
-    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-0099" });
+    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-06-099" });
 
     const folio = await consultarSiguienteFolio(mockTx);
 
-    expect(folio).toBe("OS-2025-0100");
+    expect(folio).toBe("OS-2025-06-100");
   });
 
-  it("usa el año actual", async () => {
+  it("usa el año y mes actual", async () => {
     const mockTx = createMockTx();
     mockTx.orden.findFirst.mockResolvedValue(null);
 
-    // El año ya está seteado a 2025 en beforeEach
+    // El año ya está seteado a 2025-06 en beforeEach
     const folio = await consultarSiguienteFolio(mockTx);
 
-    // Verificar que usa el año actual (2025 del fake timer)
-    expect(folio).toMatch(/^OS-\d{4}-0001$/);
+    // Verificar que usa el año y mes actual (2025-06 del fake timer)
+    expect(folio).toMatch(/^OS-2025-06-001$/);
     expect(folio.split("-")[1]).toBe("2025");
+    expect(folio.split("-")[2]).toBe("06");
     expect(mockTx.orden.findFirst).toHaveBeenCalledWith({
-      where: { folio: { startsWith: "OS-2025-" } },
+      where: { folio: { startsWith: "OS-2025-06-" } },
       orderBy: { folio: "desc" },
       select: { folio: true },
     });
@@ -100,11 +101,11 @@ describe("consultarSiguienteFolio", () => {
 
   it("parsea correctamente folios existentes", async () => {
     const mockTx = createMockTx();
-    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-0157" });
+    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-06-157" });
 
     const folio = await consultarSiguienteFolio(mockTx);
 
-    expect(folio).toBe("OS-2025-0158");
+    expect(folio).toBe("OS-2025-06-158");
   });
 });
 
@@ -119,8 +120,8 @@ describe("generarFolioConRetry - retry logic", () => {
     let callCount = 0;
 
     mockTx.orden.findFirst
-      .mockResolvedValueOnce({ folio: "OS-2025-0001" }) // Primera consulta
-      .mockResolvedValueOnce({ folio: "OS-2025-0002" }); // Segunda consulta después del retry
+      .mockResolvedValueOnce({ folio: "OS-2025-06-001" }) // Primera consulta
+      .mockResolvedValueOnce({ folio: "OS-2025-06-002" }); // Segunda consulta después del retry
 
     const createFn = vi.fn().mockImplementation(async (folio: string) => {
       callCount++;
@@ -139,8 +140,8 @@ describe("generarFolioConRetry - retry logic", () => {
 
     expect(createFn).toHaveBeenCalledTimes(2);
     expect(attempts).toBe(2);
-    expect(folio).toBe("OS-2025-0003");
-    expect(result.folio).toBe("OS-2025-0003");
+    expect(folio).toBe("OS-2025-06-003");
+    expect(result.folio).toBe("OS-2025-06-003");
   });
 
   it("genera un nuevo folio en cada reintento (no el mismo)", async () => {
@@ -148,9 +149,9 @@ describe("generarFolioConRetry - retry logic", () => {
     const foliosConsultados: string[] = [];
 
     mockTx.orden.findFirst
-      .mockResolvedValueOnce({ folio: "OS-2025-0005" })
-      .mockResolvedValueOnce({ folio: "OS-2025-0006" })
-      .mockResolvedValueOnce({ folio: "OS-2025-0007" });
+      .mockResolvedValueOnce({ folio: "OS-2025-06-005" })
+      .mockResolvedValueOnce({ folio: "OS-2025-06-006" })
+      .mockResolvedValueOnce({ folio: "OS-2025-06-007" });
 
     const createFn = vi.fn().mockImplementation(async (folio: string) => {
       foliosConsultados.push(folio);
@@ -166,16 +167,16 @@ describe("generarFolioConRetry - retry logic", () => {
 
     // Cada reintento debe consultar un folio diferente (incrementado)
     expect(foliosConsultados).toEqual([
-      "OS-2025-0006",
-      "OS-2025-0007",
-      "OS-2025-0008",
+      "OS-2025-06-006",
+      "OS-2025-06-007",
+      "OS-2025-06-008",
     ]);
   });
 
   it("falla después de 3 intentos máximo", async () => {
     const mockTx = createMockTx();
 
-    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-0001" });
+    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-06-001" });
 
     const createFn = vi.fn().mockRejectedValue(createP2002Error());
 
@@ -196,27 +197,27 @@ describe("generarFolioConRetry - retry logic", () => {
     const mockTx = createMockTx();
 
     mockTx.orden.findFirst
-      .mockResolvedValueOnce({ folio: "OS-2025-0010" })
-      .mockResolvedValueOnce({ folio: "OS-2025-0011" });
+      .mockResolvedValueOnce({ folio: "OS-2025-06-010" })
+      .mockResolvedValueOnce({ folio: "OS-2025-06-011" });
 
     const createFn = vi
       .fn()
       .mockRejectedValueOnce(createP2002Error())
-      .mockResolvedValueOnce({ id: "orden-abc", folio: "OS-2025-0012" });
+      .mockResolvedValueOnce({ id: "orden-abc", folio: "OS-2025-06-012" });
 
     const resultPromise = generarFolioConRetry(mockTx, createFn);
     await vi.advanceTimersByTimeAsync(100);
     const { result, folio, attempts } = await resultPromise;
 
-    expect(folio).toBe("OS-2025-0012");
-    expect(result.folio).toBe("OS-2025-0012");
+    expect(folio).toBe("OS-2025-06-012");
+    expect(result.folio).toBe("OS-2025-06-012");
     expect(attempts).toBe(2);
   });
 
   it("no reintenta para errores que no son P2002", async () => {
     const mockTx = createMockTx();
 
-    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-0001" });
+    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-06-001" });
 
     const otherError = createOtherPrismaError();
     const createFn = vi.fn().mockRejectedValue(otherError);
@@ -240,7 +241,7 @@ describe("crearOrdenConFolio", () => {
     mockTx.orden.findFirst.mockResolvedValue(null);
     mockTx.orden.create.mockResolvedValue({
       id: "orden-123",
-      folio: "OS-2025-0001",
+      folio: "OS-2025-06-001",
       tipoServicio: "POR_COBRAR",
     });
 
@@ -257,10 +258,10 @@ describe("crearOrdenConFolio", () => {
       include: { cliente: true },
     });
 
-    expect(orden.folio).toBe("OS-2025-0001");
+    expect(orden.folio).toBe("OS-2025-06-001");
     expect(mockTx.orden.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        folio: "OS-2025-0001",
+        folio: "OS-2025-06-001",
         tipoServicio: "POR_COBRAR",
       }),
       include: { cliente: true },
@@ -271,14 +272,14 @@ describe("crearOrdenConFolio", () => {
     const mockTx = createMockTx();
 
     mockTx.orden.findFirst
-      .mockResolvedValueOnce({ folio: "OS-2025-0001" })
-      .mockResolvedValueOnce({ folio: "OS-2025-0002" });
+      .mockResolvedValueOnce({ folio: "OS-2025-06-001" })
+      .mockResolvedValueOnce({ folio: "OS-2025-06-002" });
 
     mockTx.orden.create
       .mockRejectedValueOnce(createP2002Error())
       .mockResolvedValueOnce({
         id: "orden-456",
-        folio: "OS-2025-0003",
+        folio: "OS-2025-06-003",
       });
 
     const resultPromise = crearOrdenConFolio({
@@ -297,7 +298,7 @@ describe("crearOrdenConFolio", () => {
     const orden = await resultPromise;
 
     expect(mockTx.orden.create).toHaveBeenCalledTimes(2);
-    expect(orden.folio).toBe("OS-2025-0003");
+    expect(orden.folio).toBe("OS-2025-06-003");
   });
 });
 
@@ -307,17 +308,16 @@ describe("folio format validation", () => {
     vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
   });
 
-  it("el folio cumple con el regex /^OS-\\d{4}-\\d{4}$/ para números hasta 9999", async () => {
+  it("el folio cumple con el regex /^OS-\\d{4}-\\d{2}-\\d{3}$/ para números hasta 999", async () => {
     const mockTx = createMockTx();
-    const folioRegex = /^OS-\d{4}-\d{4}$/;
+    const folioRegex = /^OS-\d{4}-\d{2}-\d{3,}$/;
 
-    // Test con diferentes escenarios (hasta 9999 órdenes, el formato normal)
+    // Test con diferentes escenarios
     const testCases = [
-      null, // Primera orden del año -> 0001
-      { folio: "OS-2025-0001" }, // -> 0002
-      { folio: "OS-2025-0099" }, // -> 0100
-      { folio: "OS-2025-0999" }, // -> 1000
-      { folio: "OS-2025-8999" }, // -> 9000
+      null, // Primera orden del mes -> 001
+      { folio: "OS-2025-06-001" }, // -> 002
+      { folio: "OS-2025-06-099" }, // -> 100
+      { folio: "OS-2025-06-999" }, // -> 1000
     ];
 
     for (const lastOrder of testCases) {
@@ -331,38 +331,38 @@ describe("folio format validation", () => {
     const mockTx = createMockTx();
 
     // Simular caso donde el parse pudiera dar negativo (edge case)
-    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-0000" });
+    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-06-000" });
 
     const folio = await consultarSiguienteFolio(mockTx);
 
-    // El número parseado de "0000" es 0, incrementado a 1
-    expect(folio).toBe("OS-2025-0001");
-    const numero = parseInt(folio.split("-")[2], 10);
+    // El número parseado de "000" es 0, incrementado a 1
+    expect(folio).toBe("OS-2025-06-001");
+    const numero = parseInt(folio.split("-")[3], 10);
     expect(numero).toBeGreaterThan(0);
   });
 
-  it("el folio nunca empieza en 0000", async () => {
+  it("el folio nunca empieza en 000", async () => {
     const mockTx = createMockTx();
 
-    // Cuando no hay órdenes previas, debe empezar en 0001, no 0000
+    // Cuando no hay órdenes previas, debe empezar en 001, no 000
     mockTx.orden.findFirst.mockResolvedValue(null);
 
     const folio = await consultarSiguienteFolio(mockTx);
 
-    expect(folio).toBe("OS-2025-0001");
-    expect(folio).not.toContain("-0000");
+    expect(folio).toBe("OS-2025-06-001");
+    expect(folio).not.toContain("-000");
   });
 
-  it("maneja correctamente números de 5+ dígitos", async () => {
+  it("maneja correctamente números de 4+ dígitos", async () => {
     const mockTx = createMockTx();
 
-    // Caso extremo: más de 9999 órdenes
-    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-12345" });
+    // Caso extremo: más de 999 órdenes en un mes
+    mockTx.orden.findFirst.mockResolvedValue({ folio: "OS-2025-06-1234" });
 
     const folio = await consultarSiguienteFolio(mockTx);
 
-    // Debe incrementar correctamente aunque exceda 4 dígitos
-    expect(folio).toBe("OS-2025-12346");
+    // Debe incrementar correctamente aunque exceda 3 dígitos
+    expect(folio).toBe("OS-2025-06-1235");
   });
 });
 

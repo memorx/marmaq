@@ -12,6 +12,7 @@ export interface OrdenBasica {
   id: string;
   folio: string;
   tecnicoId: string | null;
+  creadoPorId?: string | null;
   marcaEquipo: string;
   modeloEquipo: string;
 }
@@ -28,7 +29,7 @@ export async function notificarOrdenCreada(
 ): Promise<void> {
   try {
     await notificarPorRol({
-      roles: [Role.COORD_SERVICIO, Role.SUPER_ADMIN],
+      roles: [Role.COORD_SERVICIO],
       ordenId: orden.id,
       tipo: TipoNotificacion.ORDEN_CREADA,
       titulo: "🔵 Nueva orden creada",
@@ -117,9 +118,9 @@ export async function notificarCambioEstado(
         break;
 
       case EstadoOrden.REPARADO:
-        // Notificar a COORD_SERVICIO + SUPER_ADMIN
+        // Notificar a COORD_SERVICIO
         await notificarPorRol({
-          roles: [Role.COORD_SERVICIO, Role.SUPER_ADMIN],
+          roles: [Role.COORD_SERVICIO],
           ordenId: orden.id,
           tipo: TipoNotificacion.ESTADO_CAMBIADO,
           titulo: "✅ Reparación completada",
@@ -127,12 +128,25 @@ export async function notificarCambioEstado(
           prioridad: PrioridadNotif.NORMAL,
           excluirUsuarioId: cambiadoPorId,
         });
+
+        // Notificar al vendedor que creó la orden (si fue creada por un vendedor)
+        if (orden.creadoPorId && orden.creadoPorId !== cambiadoPorId) {
+          await notificarUsuarios({
+            usuarioIds: [orden.creadoPorId],
+            ordenId: orden.id,
+            tipo: TipoNotificacion.ESTADO_CAMBIADO,
+            titulo: "✅ Tu orden fue reparada",
+            mensaje: `La orden ${orden.folio} que creaste ha sido reparada (${orden.marcaEquipo} ${orden.modeloEquipo})`,
+            prioridad: PrioridadNotif.NORMAL,
+            excluirUsuarioId: cambiadoPorId,
+          });
+        }
         break;
 
       case EstadoOrden.LISTO_ENTREGA:
-        // Notificar a COORD_SERVICIO + SUPER_ADMIN
+        // Notificar a COORD_SERVICIO
         await notificarPorRol({
-          roles: [Role.COORD_SERVICIO, Role.SUPER_ADMIN],
+          roles: [Role.COORD_SERVICIO],
           ordenId: orden.id,
           tipo: TipoNotificacion.ESTADO_CAMBIADO,
           titulo: "📦 Orden lista para entrega",
@@ -140,12 +154,25 @@ export async function notificarCambioEstado(
           prioridad: PrioridadNotif.NORMAL,
           excluirUsuarioId: cambiadoPorId,
         });
+
+        // Notificar al vendedor que creó la orden
+        if (orden.creadoPorId && orden.creadoPorId !== cambiadoPorId) {
+          await notificarUsuarios({
+            usuarioIds: [orden.creadoPorId],
+            ordenId: orden.id,
+            tipo: TipoNotificacion.ESTADO_CAMBIADO,
+            titulo: "📦 Tu orden está lista para entrega",
+            mensaje: `La orden ${orden.folio} que creaste está lista para entrega al cliente (${orden.marcaEquipo} ${orden.modeloEquipo})`,
+            prioridad: PrioridadNotif.NORMAL,
+            excluirUsuarioId: cambiadoPorId,
+          });
+        }
         break;
 
       case EstadoOrden.ENTREGADO:
-        // Notificar a COORD_SERVICIO + SUPER_ADMIN
+        // Notificar a COORD_SERVICIO
         await notificarPorRol({
-          roles: [Role.COORD_SERVICIO, Role.SUPER_ADMIN],
+          roles: [Role.COORD_SERVICIO],
           ordenId: orden.id,
           tipo: TipoNotificacion.ESTADO_CAMBIADO,
           titulo: "🎉 Orden entregada",

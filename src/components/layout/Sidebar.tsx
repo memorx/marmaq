@@ -54,6 +54,7 @@ export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
       COORD_SERVICIO: "Coord. Servicio",
       REFACCIONES: "Refacciones",
       TECNICO: "Técnico",
+      VENDEDOR: "Vendedor",
     };
     return roles[role] || role;
   };

@@ -295,6 +295,9 @@ export default function OrdenesPage() {
                       Folio
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Fecha
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Cliente
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -327,6 +330,11 @@ export default function OrdenesPage() {
                       <td className="px-4 py-4">
                         <span className="font-mono font-medium text-[#092139]">
                           {orden.folio}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="text-sm text-gray-600">
+                          {new Date(orden.fechaRecepcion).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
                         </span>
                       </td>
                       <td className="px-4 py-4">
@@ -402,6 +410,9 @@ export default function OrdenesPage() {
                       <SemaforoDot color={orden.semaforo} />
                       <span className="font-mono font-semibold text-[#092139]">
                         {orden.folio}
+                      </span>
+                      <span className="text-xs text-gray-400 ml-2">
+                        {new Date(orden.fechaRecepcion).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}
                       </span>
                     </div>
                     <Badge variant={getBadgeVariant(orden.tipoServicio)} className="text-xs">

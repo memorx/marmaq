@@ -55,6 +55,11 @@ export async function GET(request: NextRequest) {
       where.tecnicoId = session.user.id;
     }
 
+    // RBAC: VENDEDOR solo puede ver órdenes que él creó
+    if (userRole === "VENDEDOR") {
+      where.creadoPorId = session.user.id;
+    }
+
     if (filters.tipoServicio) {
       where.tipoServicio = filters.tipoServicio;
     }
@@ -135,7 +140,6 @@ export async function GET(request: NextRequest) {
           },
         },
         orderBy: [
-          { prioridad: "desc" },
           { fechaRecepcion: "desc" },
         ],
         // Solo aplicar paginación en BD si NO hay filtro de semáforo
@@ -194,7 +198,7 @@ export async function POST(request: NextRequest) {
     }
 
     // RBAC: Solo SUPER_ADMIN, COORD_SERVICIO y REFACCIONES pueden crear órdenes
-    if (!checkRole(session, ["SUPER_ADMIN", "COORD_SERVICIO", "REFACCIONES"])) {
+    if (!checkRole(session, ["SUPER_ADMIN", "COORD_SERVICIO", "REFACCIONES", "VENDEDOR"])) {
       return unauthorizedResponse("No tienes permisos para crear órdenes");
     }
 
@@ -230,7 +234,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 2. Crear la orden con folio automático (con retry para race conditions)
-      // Formato: OS-{YEAR}-{NNNN} (ej: OS-2025-0001)
+      // Formato: OS-{YEAR}-{MM}-{NNN} (ej: OS-2026-02-001)
       const nuevaOrden = await crearOrdenConFolio({
         tx,
         orderData: {

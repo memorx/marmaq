@@ -131,6 +131,7 @@ export async function PATCH(
         id: true,
         estado: true,
         tecnicoId: true,
+        creadoPorId: true,
         tipoServicio: true,
         cotizacion: true,
         cotizacionAprobada: true,
@@ -179,6 +180,11 @@ export async function PATCH(
             "Solo puedes actualizar órdenes en estado Espera Refacciones"
           );
         }
+      }
+
+      // VENDEDOR: no puede actualizar órdenes (solo crear)
+      if (userRole === "VENDEDOR") {
+        return unauthorizedResponse("No tienes permisos para actualizar órdenes");
       }
     }
 
@@ -422,6 +428,7 @@ export async function PATCH(
       id: ordenActualizada.id,
       folio: ordenActualizada.folio,
       tecnicoId: ordenActualizada.tecnicoId,
+      creadoPorId: ordenActualizada.creadoPorId,
       marcaEquipo: ordenActualizada.marcaEquipo,
       modeloEquipo: ordenActualizada.modeloEquipo,
     };

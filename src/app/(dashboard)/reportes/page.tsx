@@ -6,7 +6,7 @@ import { FileSpreadsheet, Download, Loader2, FileText, Calendar, Filter, BarChar
 import { STATUS_LABELS } from "@/lib/constants/labels";
 import type { EstadoOrden } from "@/types/ordenes";
 
-type TipoReporte = "TORREY" | "FABATSA" | "REPARE";
+type TipoReporte = "TORREY" | "FABATSA" | "REPARE" | "GENERAL";
 
 interface ReportePreview {
   tipo: string;
@@ -16,6 +16,11 @@ interface ReportePreview {
 }
 
 const TIPOS_REPORTE: { value: TipoReporte; label: string; description: string }[] = [
+  {
+    value: "GENERAL",
+    label: "General (Consolidado)",
+    description: "Todas las órdenes entregadas en el mes, sin importar tipo de servicio",
+  },
   {
     value: "TORREY",
     label: "TORREY (Básculas)",
@@ -40,7 +45,7 @@ const MESES = [
 
 export default function ReportesPage() {
   const currentDate = new Date();
-  const [tipoReporte, setTipoReporte] = useState<TipoReporte>("TORREY");
+  const [tipoReporte, setTipoReporte] = useState<TipoReporte>("GENERAL");
   const [mes, setMes] = useState(currentDate.getMonth() + 1);
   const [año, setAño] = useState(currentDate.getFullYear());
   const [loading, setLoading] = useState(false);
@@ -123,7 +128,7 @@ export default function ReportesPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reportes</h1>
           <p className="text-gray-600">
-            Genera reportes mensuales para TORREY, FABATSA y REPARE
+            Genera reportes mensuales consolidados y por marca
           </p>
         </div>
         <Link
@@ -146,7 +151,7 @@ export default function ReportesPage() {
               Tipo de Reporte
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {TIPOS_REPORTE.map((tipo) => (
                 <button
                   key={tipo.value}

@@ -46,6 +46,14 @@ function formatCurrency(amount: number | null): string {
   return `$${Number(amount).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
 }
 
+function formatAccesorios(accesorios: unknown): string {
+  if (!accesorios) return "-";
+  if (typeof accesorios === "string") return accesorios;
+  const acc = accesorios as Record<string, boolean>;
+  const lista = Object.entries(acc).filter(([, v]) => v).map(([k]) => k);
+  return lista.length > 0 ? lista.join(", ") : "-";
+}
+
 // ============ GET /api/ordenes/[id]/pdf ============
 // Generar PDF de hoja de servicio
 export async function GET(
@@ -59,6 +67,8 @@ export async function GET(
     }
 
     const { id } = await params;
+    const url = new URL(request.url);
+    const tipo = url.searchParams.get("tipo") || "completo";
 
     // Obtener orden con todas las relaciones
     const orden = await prisma.orden.findUnique({
@@ -83,14 +93,19 @@ export async function GET(
       );
     }
 
+    // Determinar título y nombre de archivo según tipo
+    const isComprobante = tipo === "comprobante";
+    const docTitle = isComprobante ? "Comprobante de Recepción" : "Hoja de Servicio";
+    const fileName = isComprobante ? `comprobante-${orden.folio}.pdf` : `hoja-servicio-${orden.folio}.pdf`;
+
     // Crear documento PDF
     const doc = new PDFDocument({
       size: "LETTER",
       margins: { top: 50, bottom: 50, left: 50, right: 50 },
       info: {
-        Title: `Hoja de Servicio - ${orden.folio}`,
+        Title: `${docTitle} - ${orden.folio}`,
         Author: "MARMAQ",
-        Subject: "Hoja de Servicio",
+        Subject: docTitle,
       },
     });
 
@@ -116,8 +131,7 @@ export async function GET(
     const contentWidth = pageWidth - marginLeft - marginRight;
     let y = 50;
 
-    // ============ HEADER CON LOGO ============
-    // Intentar cargar el logo
+    // ============ HEADER CON LOGO (compartido) ============
     const logoPath = path.join(process.cwd(), "public", "images", "logo-marmaq.jpeg");
     const logoExists = fs.existsSync(logoPath);
 
@@ -126,13 +140,11 @@ export async function GET(
         doc.image(logoPath, marginLeft, y, { width: 120 });
         y += 60;
       } catch {
-        // Si falla cargar el logo, usar texto
         doc.fontSize(24).fillColor(COLORS.secondary).font("Helvetica-Bold");
         doc.text("MARMAQ", marginLeft, y);
         y += 35;
       }
     } else {
-      // Logo texto
       doc.fontSize(24).fillColor(COLORS.secondary).font("Helvetica-Bold");
       doc.text("MARMAQ", marginLeft, y);
       doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
@@ -142,20 +154,20 @@ export async function GET(
 
     // Título del documento y folio (alineado a la derecha)
     doc.fontSize(18).fillColor(COLORS.secondary).font("Helvetica-Bold");
-    doc.text("HOJA DE SERVICIO", pageWidth - marginRight - 200, 50, {
-      width: 200,
+    doc.text(isComprobante ? "COMPROBANTE DE RECEPCIÓN" : "HOJA DE SERVICIO", pageWidth - marginRight - 250, 50, {
+      width: 250,
       align: "right",
     });
 
     doc.fontSize(14).fillColor(COLORS.primary).font("Helvetica-Bold");
-    doc.text(orden.folio, pageWidth - marginRight - 200, 75, {
-      width: 200,
+    doc.text(orden.folio, pageWidth - marginRight - 250, 75, {
+      width: 250,
       align: "right",
     });
 
     doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
-    doc.text(`Fecha: ${formatDate(orden.fechaRecepcion)}`, pageWidth - marginRight - 200, 95, {
-      width: 200,
+    doc.text(`Fecha: ${formatDate(orden.fechaRecepcion)}`, pageWidth - marginRight - 250, 95, {
+      width: 250,
       align: "right",
     });
 
@@ -165,7 +177,7 @@ export async function GET(
     doc.moveTo(marginLeft, y).lineTo(pageWidth - marginRight, y).strokeColor(COLORS.lightGray).lineWidth(1).stroke();
     y += 15;
 
-    // ============ DATOS DEL CLIENTE ============
+    // ============ DATOS DEL CLIENTE (ambos tipos) ============
     doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
     doc.text("DATOS DEL CLIENTE", marginLeft, y);
     y += 20;
@@ -173,9 +185,14 @@ export async function GET(
     const clienteData: [string, string][] = [
       ["Nombre:", String(orden.cliente.nombre || "-")],
       ["Empresa:", String(orden.cliente.empresa || "-")],
-      ["Teléfono:", String(orden.cliente.telefono || "-")],
-      ["Email:", String(orden.cliente.email || "-")],
     ];
+    // Comprobante no incluye teléfono/email del cliente
+    if (!isComprobante) {
+      clienteData.push(
+        ["Teléfono:", String(orden.cliente.telefono || "-")],
+        ["Email:", String(orden.cliente.email || "-")],
+      );
+    }
 
     doc.fontSize(10).font("Helvetica");
     for (const [label, value] of clienteData) {
@@ -186,7 +203,7 @@ export async function GET(
 
     y += 10;
 
-    // ============ DATOS DEL EQUIPO ============
+    // ============ DATOS DEL EQUIPO (ambos tipos) ============
     doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
     doc.text("DATOS DEL EQUIPO", marginLeft, y);
     y += 20;
@@ -196,7 +213,7 @@ export async function GET(
       ["Modelo:", String(orden.modeloEquipo || "-")],
       ["No. Serie:", String(orden.serieEquipo || "-")],
       ["Condición:", String(orden.condicionEquipo || "-")],
-      ["Accesorios:", String(orden.accesorios || "-")],
+      ["Accesorios:", formatAccesorios(orden.accesorios)],
     ];
 
     doc.fontSize(10).font("Helvetica");
@@ -208,18 +225,19 @@ export async function GET(
 
     y += 10;
 
-    // ============ TIPO DE SERVICIO ============
+    // ============ TIPO DE SERVICIO (ambos tipos) ============
     doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
     doc.text("TIPO DE SERVICIO", marginLeft, y);
     y += 20;
 
-    // Badge de tipo
     doc.fontSize(10).font("Helvetica-Bold");
     const tipoLabel = SERVICE_TYPE_LABELS[orden.tipoServicio];
     doc.fillColor(COLORS.primary).text(tipoLabel, marginLeft, y);
 
-    doc.font("Helvetica").fillColor(COLORS.gray);
-    doc.text(`  •  Estado: ${STATUS_LABELS[orden.estado]}`, marginLeft + 100, y);
+    if (!isComprobante) {
+      doc.font("Helvetica").fillColor(COLORS.gray);
+      doc.text(`  •  Estado: ${STATUS_LABELS[orden.estado]}`, marginLeft + 100, y);
+    }
     y += 20;
 
     // Datos de garantía si aplica
@@ -241,7 +259,7 @@ export async function GET(
 
     y += 10;
 
-    // ============ FALLA REPORTADA ============
+    // ============ FALLA REPORTADA (ambos tipos) ============
     doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
     doc.text("FALLA REPORTADA", marginLeft, y);
     y += 20;
@@ -251,93 +269,88 @@ export async function GET(
     doc.text(fallaText, marginLeft, y, { width: contentWidth });
     y += doc.heightOfString(fallaText, { width: contentWidth }) + 15;
 
-    // ============ DIAGNÓSTICO Y SOLUCIÓN ============
-    doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
-    doc.text("DIAGNÓSTICO Y SOLUCIÓN", marginLeft, y);
-    y += 20;
-
-    doc.fontSize(10).fillColor(COLORS.secondary).font("Helvetica");
-    const diagnosticoText = orden.diagnostico || "Pendiente de diagnóstico";
-    doc.text(diagnosticoText, marginLeft, y, { width: contentWidth });
-    y += doc.heightOfString(diagnosticoText, { width: contentWidth }) + 15;
-
-    // ============ MATERIALES UTILIZADOS ============
-    if (orden.materialesUsados && orden.materialesUsados.length > 0) {
-      // Verificar si necesitamos nueva página
-      if (y > 550) {
-        doc.addPage();
-        y = 50;
-      }
-
+    // ============ SECCIONES SOLO PARA REPORTE COMPLETO ============
+    if (!isComprobante) {
+      // DIAGNÓSTICO Y SOLUCIÓN
       doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
-      doc.text("MATERIALES UTILIZADOS", marginLeft, y);
+      doc.text("DIAGNÓSTICO Y SOLUCIÓN", marginLeft, y);
       y += 20;
 
-      // Encabezados de tabla
-      doc.fontSize(9).font("Helvetica-Bold").fillColor(COLORS.gray);
-      doc.text("Descripción", marginLeft, y);
-      doc.text("Cant.", marginLeft + 280, y);
-      doc.text("P. Unit.", marginLeft + 340, y);
-      doc.text("Total", marginLeft + 420, y);
-      y += 15;
+      doc.fontSize(10).fillColor(COLORS.secondary).font("Helvetica");
+      const diagnosticoText = orden.diagnostico || "Pendiente de diagnóstico";
+      doc.text(diagnosticoText, marginLeft, y, { width: contentWidth });
+      y += doc.heightOfString(diagnosticoText, { width: contentWidth }) + 15;
 
-      // Línea
-      doc.moveTo(marginLeft, y).lineTo(pageWidth - marginRight, y).strokeColor(COLORS.lightGray).stroke();
-      y += 5;
+      // MATERIALES UTILIZADOS
+      if (orden.materialesUsados && orden.materialesUsados.length > 0) {
+        if (y > 550) {
+          doc.addPage();
+          y = 50;
+        }
 
-      // Filas de materiales
-      let totalMateriales = 0;
-      doc.fontSize(9).font("Helvetica").fillColor(COLORS.secondary);
+        doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
+        doc.text("MATERIALES UTILIZADOS", marginLeft, y);
+        y += 20;
 
-      for (const mu of orden.materialesUsados) {
-        const precioUnit = mu.precioUnitario ? Number(mu.precioUnitario) : 0;
-        const subtotal = precioUnit * mu.cantidad;
-        totalMateriales += subtotal;
-
-        doc.text(mu.material.nombre, marginLeft, y, { width: 270 });
-        doc.text(String(mu.cantidad), marginLeft + 280, y);
-        doc.text(formatCurrency(precioUnit), marginLeft + 340, y);
-        doc.text(formatCurrency(subtotal), marginLeft + 420, y);
+        doc.fontSize(9).font("Helvetica-Bold").fillColor(COLORS.gray);
+        doc.text("Descripción", marginLeft, y);
+        doc.text("Cant.", marginLeft + 280, y);
+        doc.text("P. Unit.", marginLeft + 340, y);
+        doc.text("Total", marginLeft + 420, y);
         y += 15;
+
+        doc.moveTo(marginLeft, y).lineTo(pageWidth - marginRight, y).strokeColor(COLORS.lightGray).stroke();
+        y += 5;
+
+        let totalMateriales = 0;
+        doc.fontSize(9).font("Helvetica").fillColor(COLORS.secondary);
+
+        for (const mu of orden.materialesUsados) {
+          const precioUnit = mu.precioUnitario ? Number(mu.precioUnitario) : 0;
+          const subtotal = precioUnit * mu.cantidad;
+          totalMateriales += subtotal;
+
+          doc.text(mu.material.nombre, marginLeft, y, { width: 270 });
+          doc.text(String(mu.cantidad), marginLeft + 280, y);
+          doc.text(formatCurrency(precioUnit), marginLeft + 340, y);
+          doc.text(formatCurrency(subtotal), marginLeft + 420, y);
+          y += 15;
+        }
+
+        y += 5;
+        doc.moveTo(marginLeft, y).lineTo(pageWidth - marginRight, y).strokeColor(COLORS.lightGray).stroke();
+        y += 10;
+
+        doc.fontSize(10).font("Helvetica-Bold").fillColor(COLORS.secondary);
+        doc.text("Total Materiales:", marginLeft + 320, y);
+        doc.fillColor(COLORS.primary).text(formatCurrency(totalMateriales), marginLeft + 420, y);
+        y += 25;
       }
 
-      // Total
-      y += 5;
-      doc.moveTo(marginLeft, y).lineTo(pageWidth - marginRight, y).strokeColor(COLORS.lightGray).stroke();
-      y += 10;
+      // TOTAL A PAGAR (Solo para POR_COBRAR)
+      if (orden.tipoServicio === "POR_COBRAR" && orden.cotizacion) {
+        if (y > 600) {
+          doc.addPage();
+          y = 50;
+        }
 
-      doc.fontSize(10).font("Helvetica-Bold").fillColor(COLORS.secondary);
-      doc.text("Total Materiales:", marginLeft + 320, y);
-      doc.fillColor(COLORS.primary).text(formatCurrency(totalMateriales), marginLeft + 420, y);
-      y += 25;
-    }
+        doc.rect(marginLeft, y, contentWidth, 50).fillColor("#F3F4F6").fill();
 
-    // ============ TOTAL A PAGAR (Solo para POR_COBRAR) ============
-    if (orden.tipoServicio === "POR_COBRAR" && orden.cotizacion) {
-      // Verificar si necesitamos nueva página
-      if (y > 600) {
-        doc.addPage();
-        y = 50;
+        doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
+        doc.text("TOTAL A PAGAR", marginLeft + 20, y + 10);
+
+        doc.fontSize(20).fillColor(COLORS.primary).font("Helvetica-Bold");
+        doc.text(formatCurrency(Number(orden.cotizacion)), marginLeft + 20, y + 28);
+
+        const statusText = orden.cotizacionAprobada ? "Cotización Aprobada" : "Cotización Pendiente";
+        doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
+        doc.text(statusText, pageWidth - marginRight - 150, y + 20, { width: 130, align: "right" });
+
+        y += 70;
       }
-
-      // Caja de total
-      doc.rect(marginLeft, y, contentWidth, 50).fillColor("#F3F4F6").fill();
-
-      doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
-      doc.text("TOTAL A PAGAR", marginLeft + 20, y + 10);
-
-      doc.fontSize(20).fillColor(COLORS.primary).font("Helvetica-Bold");
-      doc.text(formatCurrency(Number(orden.cotizacion)), marginLeft + 20, y + 28);
-
-      const statusText = orden.cotizacionAprobada ? "Cotización Aprobada" : "Cotización Pendiente";
-      doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
-      doc.text(statusText, pageWidth - marginRight - 150, y + 20, { width: 130, align: "right" });
-
-      y += 70;
     }
 
     // ============ FIRMAS ============
-    // Verificar si necesitamos nueva página
     if (y > 530) {
       doc.addPage();
       y = 50;
@@ -345,60 +358,94 @@ export async function GET(
 
     y = Math.max(y, 560); // Posicionar firmas al final
 
-    doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
-    doc.text("FIRMAS", marginLeft, y);
-    y += 20;
+    if (isComprobante) {
+      // Comprobante: solo firma del cliente
+      doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text("FIRMA DE RECEPCIÓN", marginLeft, y);
+      y += 20;
 
-    // Líneas de firma
-    const firmaWidth = (contentWidth - 40) / 2;
+      const firmaWidth = contentWidth / 2;
+      const firmaX = marginLeft + (contentWidth - firmaWidth) / 2;
 
-    // Firma Técnico
-    doc.moveTo(marginLeft, y + 50).lineTo(marginLeft + firmaWidth, y + 50).strokeColor(COLORS.secondary).lineWidth(0.5).stroke();
-    doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
-    doc.text("Técnico Responsable", marginLeft, y + 55, { width: firmaWidth, align: "center" });
-    doc.fontSize(9).fillColor(COLORS.secondary);
-    doc.text(orden.tecnico?.name || "________________", marginLeft, y + 70, { width: firmaWidth, align: "center" });
-
-    // Firma Cliente
-    const firmaClienteX = marginLeft + firmaWidth + 40;
-
-    // Si hay firma digital del cliente, mostrarla
-    if (orden.firmaClienteUrl) {
-      try {
-        // Intentar descargar la imagen de firma
-        const firmaResponse = await fetch(orden.firmaClienteUrl);
-        if (firmaResponse.ok) {
-          const firmaBuffer = Buffer.from(await firmaResponse.arrayBuffer());
-          // Insertar la imagen de firma
-          doc.image(firmaBuffer, firmaClienteX + 30, y, {
-            width: firmaWidth - 60,
-            height: 45,
-            fit: [firmaWidth - 60, 45],
-          });
+      if (orden.firmaClienteUrl) {
+        try {
+          const firmaResponse = await fetch(orden.firmaClienteUrl);
+          if (firmaResponse.ok) {
+            const firmaBuffer = Buffer.from(await firmaResponse.arrayBuffer());
+            doc.image(firmaBuffer, firmaX + 30, y, {
+              width: firmaWidth - 60,
+              height: 45,
+              fit: [firmaWidth - 60, 45],
+            });
+          }
+        } catch (firmaError) {
+          console.error("Error loading signature image:", firmaError);
         }
-      } catch (firmaError) {
-        console.error("Error loading signature image:", firmaError);
-        // Si falla, continuar sin la firma
       }
-    }
 
-    doc.moveTo(firmaClienteX, y + 50).lineTo(firmaClienteX + firmaWidth, y + 50).strokeColor(COLORS.secondary).lineWidth(0.5).stroke();
-    doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
-    doc.text("Cliente", firmaClienteX, y + 55, { width: firmaWidth, align: "center" });
-    doc.fontSize(9).fillColor(COLORS.secondary);
-    doc.text(orden.cliente.nombre, firmaClienteX, y + 70, { width: firmaWidth, align: "center" });
+      doc.moveTo(firmaX, y + 50).lineTo(firmaX + firmaWidth, y + 50).strokeColor(COLORS.secondary).lineWidth(0.5).stroke();
+      doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
+      doc.text("Cliente", firmaX, y + 55, { width: firmaWidth, align: "center" });
+      doc.fontSize(9).fillColor(COLORS.secondary);
+      doc.text(orden.cliente.nombre, firmaX, y + 70, { width: firmaWidth, align: "center" });
 
-    // Si hay fecha de firma, mostrarla
-    if (orden.firmaFecha) {
-      doc.fontSize(8).fillColor(COLORS.gray);
-      doc.text(`Firmado: ${formatDateTime(orden.firmaFecha)}`, firmaClienteX, y + 85, { width: firmaWidth, align: "center" });
+      if (orden.firmaFecha) {
+        doc.fontSize(8).fillColor(COLORS.gray);
+        doc.text(`Firmado: ${formatDateTime(orden.firmaFecha)}`, firmaX, y + 85, { width: firmaWidth, align: "center" });
+      }
+    } else {
+      // Reporte completo: firma técnico + cliente
+      doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text("FIRMAS", marginLeft, y);
+      y += 20;
+
+      const firmaWidth = (contentWidth - 40) / 2;
+
+      // Firma Técnico
+      doc.moveTo(marginLeft, y + 50).lineTo(marginLeft + firmaWidth, y + 50).strokeColor(COLORS.secondary).lineWidth(0.5).stroke();
+      doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
+      doc.text("Técnico Responsable", marginLeft, y + 55, { width: firmaWidth, align: "center" });
+      doc.fontSize(9).fillColor(COLORS.secondary);
+      doc.text(orden.tecnico?.name || "________________", marginLeft, y + 70, { width: firmaWidth, align: "center" });
+
+      // Firma Cliente
+      const firmaClienteX = marginLeft + firmaWidth + 40;
+
+      if (orden.firmaClienteUrl) {
+        try {
+          const firmaResponse = await fetch(orden.firmaClienteUrl);
+          if (firmaResponse.ok) {
+            const firmaBuffer = Buffer.from(await firmaResponse.arrayBuffer());
+            doc.image(firmaBuffer, firmaClienteX + 30, y, {
+              width: firmaWidth - 60,
+              height: 45,
+              fit: [firmaWidth - 60, 45],
+            });
+          }
+        } catch (firmaError) {
+          console.error("Error loading signature image:", firmaError);
+        }
+      }
+
+      doc.moveTo(firmaClienteX, y + 50).lineTo(firmaClienteX + firmaWidth, y + 50).strokeColor(COLORS.secondary).lineWidth(0.5).stroke();
+      doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
+      doc.text("Cliente", firmaClienteX, y + 55, { width: firmaWidth, align: "center" });
+      doc.fontSize(9).fillColor(COLORS.secondary);
+      doc.text(orden.cliente.nombre, firmaClienteX, y + 70, { width: firmaWidth, align: "center" });
+
+      if (orden.firmaFecha) {
+        doc.fontSize(8).fillColor(COLORS.gray);
+        doc.text(`Firmado: ${formatDateTime(orden.firmaFecha)}`, firmaClienteX, y + 85, { width: firmaWidth, align: "center" });
+      }
     }
 
     // ============ PIE DE PÁGINA ============
     y = 750;
     doc.fontSize(8).fillColor(COLORS.gray).font("Helvetica");
     doc.text(
-      `Documento generado el ${formatDateTime(new Date())} • MARMAQ Servicio Técnico`,
+      isComprobante
+        ? `Conserve este comprobante. MARMAQ Servicio Técnico • ${formatDateTime(new Date())}`
+        : `Documento generado el ${formatDateTime(new Date())} • MARMAQ Servicio Técnico`,
       marginLeft,
       y,
       { width: contentWidth, align: "center" }
@@ -415,7 +462,7 @@ export async function GET(
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="hoja-servicio-${orden.folio}.pdf"`,
+        "Content-Disposition": `inline; filename="${fileName}"`,
         "Content-Length": String(pdfBuffer.length),
       },
     });

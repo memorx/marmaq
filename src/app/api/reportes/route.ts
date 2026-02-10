@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
-import { generateTorreyReport, generateRepareReport } from "@/lib/reportes";
+import { generateTorreyReport, generateRepareReport, generateGeneralReport } from "@/lib/reportes";
 import { TipoServicio } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // Tipos de reporte soportados
-type TipoReporte = "TORREY" | "REPARE" | "FABATSA";
+type TipoReporte = "TORREY" | "REPARE" | "FABATSA" | "GENERAL";
 
 // GET /api/reportes?tipo=TORREY&mes=11&año=2024
 export async function GET(request: NextRequest) {
@@ -55,9 +55,12 @@ export async function GET(request: NextRequest) {
       case "REPARE":
         tipoServicioFilter = [TipoServicio.REPARE];
         break;
+      case "GENERAL":
+        tipoServicioFilter = [];
+        break;
       default:
         return NextResponse.json(
-          { error: `Tipo de reporte inválido: ${tipo}. Válidos: TORREY, FABATSA, REPARE` },
+          { error: `Tipo de reporte inválido: ${tipo}. Válidos: TORREY, FABATSA, REPARE, GENERAL` },
           { status: 400 }
         );
     }
@@ -65,11 +68,11 @@ export async function GET(request: NextRequest) {
     // Consultar órdenes del período
     const ordenes = await prisma.orden.findMany({
       where: {
-        tipoServicio: { in: tipoServicioFilter },
-        fechaRecepcion: {
-          gte: fechaInicio,
-          lte: fechaFin,
-        },
+        ...(tipoServicioFilter.length > 0 ? { tipoServicio: { in: tipoServicioFilter } } : {}),
+        ...(tipo === "GENERAL"
+          ? { fechaEntrega: { gte: fechaInicio, lte: fechaFin }, estado: "ENTREGADO" }
+          : { fechaRecepcion: { gte: fechaInicio, lte: fechaFin } }
+        ),
       },
       include: {
         cliente: true,
@@ -92,6 +95,10 @@ export async function GET(request: NextRequest) {
       case "REPARE":
         buffer = await generateRepareReport(ordenes, mes, año);
         filename = `LayOut_REPARE_${getMonthName(mes)}_${año}.xlsx`;
+        break;
+      case "GENERAL":
+        buffer = await generateGeneralReport(ordenes, mes, año);
+        filename = `Reporte_General_${getMonthName(mes)}_${año}.xlsx`;
         break;
       default:
         throw new Error("Tipo no soportado");
@@ -140,31 +147,31 @@ export async function POST(request: NextRequest) {
       case "REPARE":
         tipoServicioFilter = [TipoServicio.REPARE];
         break;
+      case "GENERAL":
+        tipoServicioFilter = [];
+        break;
       default:
         tipoServicioFilter = [TipoServicio.GARANTIA];
     }
 
+    // Construir where según tipo
+    const previewWhere = {
+      ...(tipoServicioFilter.length > 0 ? { tipoServicio: { in: tipoServicioFilter } } : {}),
+      ...(tipo === "GENERAL"
+        ? { fechaEntrega: { gte: fechaInicio, lte: fechaFin }, estado: "ENTREGADO" as const }
+        : { fechaRecepcion: { gte: fechaInicio, lte: fechaFin } }
+      ),
+    };
+
     // Contar órdenes
     const count = await prisma.orden.count({
-      where: {
-        tipoServicio: { in: tipoServicioFilter },
-        fechaRecepcion: {
-          gte: fechaInicio,
-          lte: fechaFin,
-        },
-      },
+      where: previewWhere,
     });
 
     // Obtener resumen por estado
     const resumenEstados = await prisma.orden.groupBy({
       by: ["estado"],
-      where: {
-        tipoServicio: { in: tipoServicioFilter },
-        fechaRecepcion: {
-          gte: fechaInicio,
-          lte: fechaFin,
-        },
-      },
+      where: previewWhere,
       _count: true,
     });
 

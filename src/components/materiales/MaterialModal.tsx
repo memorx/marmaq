@@ -40,6 +40,7 @@ const CATEGORIAS = [
   { value: "REFACCION", label: "Refacción" },
   { value: "CONSUMIBLE", label: "Consumible" },
   { value: "HERRAMIENTA", label: "Herramienta" },
+  { value: "MANO_DE_OBRA", label: "Mano de Obra" },
 ];
 
 export function MaterialModal({ isOpen, onClose, onSave, material }: MaterialModalProps) {

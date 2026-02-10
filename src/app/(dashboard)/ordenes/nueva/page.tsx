@@ -19,6 +19,19 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+// Accesorios predefinidos
+const ACCESORIOS_PREDEFINIDOS = [
+  "Plato",
+  "Eliminador",
+  "Antena",
+  "Torreta",
+  "Cable",
+  "Módulo",
+  "Piedras de afilar",
+  "Charola",
+  "Cuchilla",
+];
+
 // Opciones de tipos de equipo
 const TIPO_EQUIPO_OPTIONS = [
   "Báscula",
@@ -114,7 +127,8 @@ export default function NuevaOrdenPage() {
   const [marca, setMarca] = useState("");
   const [modelo, setModelo] = useState("");
   const [serie, setSerie] = useState("");
-  const [accesorios, setAccesorios] = useState("");
+  const [accesoriosSeleccionados, setAccesoriosSeleccionados] = useState<Record<string, boolean>>({});
+  const [accesorioCustom, setAccesorioCustom] = useState("");
   const [fallaReportada, setFallaReportada] = useState("");
   const [condicionEquipo, setCondicionEquipo] = useState<CondicionEquipo>("REGULAR");
 
@@ -128,6 +142,9 @@ export default function NuevaOrdenPage() {
     empresa: "",
     telefono: "",
     email: "",
+    direccion: "",
+    ciudad: "",
+    referencias: "",
   });
 
   // Asignación
@@ -155,12 +172,8 @@ export default function NuevaOrdenPage() {
           setTecnicos(data.usuarios || []);
         }
       } catch {
-        // Datos de prueba si no hay API
-        setTecnicos([
-          { id: "1", name: "Juan Pérez" },
-          { id: "2", name: "Carlos García" },
-          { id: "3", name: "Miguel López" },
-        ]);
+        console.error("Error al cargar técnicos");
+        setTecnicos([]);
       }
     }
     fetchTecnicos();
@@ -187,6 +200,20 @@ export default function NuevaOrdenPage() {
 
     return () => clearTimeout(timer);
   }, [busquedaCliente]);
+
+  const handleEnterKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && e.target instanceof HTMLInputElement) {
+      e.preventDefault();
+      const form = e.currentTarget;
+      const inputs = Array.from(
+        form.querySelectorAll<HTMLElement>("input, select, textarea")
+      ).filter((el) => !el.hasAttribute("disabled") && el.tabIndex !== -1);
+      const currentIndex = inputs.indexOf(e.target as HTMLElement);
+      if (currentIndex >= 0 && currentIndex < inputs.length - 1) {
+        inputs[currentIndex + 1].focus();
+      }
+    }
+  };
 
   const handleSubmit = async () => {
     // Validaciones
@@ -219,10 +246,7 @@ export default function NuevaOrdenPage() {
     setError(null);
 
     try {
-      // Concatenar accesorios a la falla si existen
-      const fallaCompleta = accesorios
-        ? `${fallaReportada}\n\nAccesorios entregados: ${accesorios}`
-        : fallaReportada;
+      const accesoriosActivos = Object.entries(accesoriosSeleccionados).filter(([, v]) => v);
 
       const payload: CreateOrdenInput = {
         tipoServicio,
@@ -231,7 +255,10 @@ export default function NuevaOrdenPage() {
         modeloEquipo: modelo,
         serieEquipo: serie || undefined,
         condicionEquipo,
-        fallaReportada: fallaCompleta,
+        fallaReportada,
+        accesorios: accesoriosActivos.length > 0
+          ? Object.fromEntries(accesoriosActivos)
+          : undefined,
         tecnicoId: tecnicoId || undefined,
         numeroFactura: numeroFactura || undefined,
         fechaFactura: fechaFactura || undefined,
@@ -241,11 +268,18 @@ export default function NuevaOrdenPage() {
       if (clienteSeleccionado) {
         payload.clienteId = clienteSeleccionado.id;
       } else {
+        const direccionCompleta = [
+          nuevoCliente.direccion,
+          nuevoCliente.referencias ? `Ref: ${nuevoCliente.referencias}` : "",
+        ].filter(Boolean).join(" | ");
+
         payload.clienteNuevo = {
           nombre: nuevoCliente.nombre,
           empresa: nuevoCliente.empresa || undefined,
           telefono: nuevoCliente.telefono,
           email: nuevoCliente.email || undefined,
+          direccion: direccionCompleta || undefined,
+          ciudad: nuevoCliente.ciudad || undefined,
         };
       }
 
@@ -290,7 +324,7 @@ export default function NuevaOrdenPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onKeyDown={handleEnterKey}>
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
@@ -455,12 +489,78 @@ export default function NuevaOrdenPage() {
                 </div>
               </div>
 
-              <Input
-                label="Accesorios Entregados"
-                value={accesorios}
-                onChange={(e) => setAccesorios(e.target.value)}
-                placeholder="Ej: Plato, eliminador, cable de corriente"
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Accesorios Entregados
+                </label>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {ACCESORIOS_PREDEFINIDOS.map((acc) => (
+                    <button
+                      key={acc}
+                      type="button"
+                      onClick={() =>
+                        setAccesoriosSeleccionados((prev) => ({
+                          ...prev,
+                          [acc]: !prev[acc],
+                        }))
+                      }
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                        accesoriosSeleccionados[acc]
+                          ? "bg-[#31A7D4] text-white border-[#31A7D4]"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                      }`}
+                    >
+                      {accesoriosSeleccionados[acc] ? "\u2713 " : ""}{acc}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={accesorioCustom}
+                    onChange={(e) => setAccesorioCustom(e.target.value)}
+                    placeholder="Otro accesorio..."
+                    className="flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (accesorioCustom.trim()) {
+                        setAccesoriosSeleccionados((prev) => ({
+                          ...prev,
+                          [accesorioCustom.trim()]: true,
+                        }));
+                        setAccesorioCustom("");
+                      }
+                    }}
+                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
+                  >
+                    + Agregar
+                  </button>
+                </div>
+                {Object.entries(accesoriosSeleccionados)
+                  .filter(([key, val]) => val && !ACCESORIOS_PREDEFINIDOS.includes(key))
+                  .map(([key]) => (
+                    <span
+                      key={key}
+                      className="inline-flex items-center gap-1 mt-2 mr-2 px-3 py-1.5 rounded-full text-sm font-medium bg-[#31A7D4] text-white"
+                    >
+                      {key}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAccesoriosSeleccionados((prev) => {
+                            const next = { ...prev };
+                            delete next[key];
+                            return next;
+                          })
+                        }
+                        className="ml-1 hover:text-gray-200"
+                      >
+                        \u00d7
+                      </button>
+                    </span>
+                  ))}
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -601,6 +701,36 @@ export default function NuevaOrdenPage() {
                       setNuevoCliente({ ...nuevoCliente, email: e.target.value })
                     }
                     placeholder="correo@ejemplo.com"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  <Input
+                    label="Dirección"
+                    value={nuevoCliente.direccion}
+                    onChange={(e) =>
+                      setNuevoCliente({ ...nuevoCliente, direccion: e.target.value })
+                    }
+                    placeholder="Calle, número, colonia"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    label="Ciudad"
+                    value={nuevoCliente.ciudad}
+                    onChange={(e) =>
+                      setNuevoCliente({ ...nuevoCliente, ciudad: e.target.value })
+                    }
+                    placeholder="Ciudad"
+                  />
+                  <Input
+                    label="Referencias (opcional)"
+                    value={nuevoCliente.referencias}
+                    onChange={(e) =>
+                      setNuevoCliente({ ...nuevoCliente, referencias: e.target.value })
+                    }
+                    placeholder="Entre calles, frente a..."
                   />
                 </div>
               </div>

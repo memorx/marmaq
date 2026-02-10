@@ -82,9 +82,18 @@ async function main() {
         activo: true,
       },
     }),
+    prisma.user.create({
+      data: {
+        email: "vendedor@marmaq.mx",
+        name: "Vendedor Demo",
+        password: hashedPassword,
+        role: Role.VENDEDOR,
+        activo: true,
+      },
+    }),
   ]);
 
-  const [admin, coord1, coord2, refacciones, tecnico1, tecnico2] = users;
+  const [admin, coord1, coord2, refacciones, tecnico1, tecnico2, vendedor] = users;
   console.log(`👥 ${users.length} usuarios creados`);
 
   // Crear clientes
@@ -512,6 +521,7 @@ async function main() {
   console.log("   ricardo@marmaq.mx / marmaq2024 (Coord. Servicio)");
   console.log("   benito@marmaq.mx / marmaq2024 (Técnico)");
   console.log("   carlos@marmaq.mx / marmaq2024 (Técnico)");
+  console.log("   vendedor@marmaq.mx / marmaq2024 (Vendedor)");
   console.log("\n📋 Órdenes de prueba:");
   console.log("   OS-2024-0001: GARANTÍA - LISTO_ENTREGA (🔴 Rojo - más de 5 días)");
   console.log("   OS-2024-0002: CENTRO_SERVICIO - ESPERA_REFACCIONES (🟠 Naranja)");

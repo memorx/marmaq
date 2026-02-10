@@ -18,6 +18,7 @@ import {
   Wrench,
   Fuel,
   Hammer,
+  HandCoins,
 } from "lucide-react";
 
 interface Material {
@@ -54,6 +55,7 @@ const CATEGORIAS = [
   { value: "REFACCION", label: "Refacciones" },
   { value: "CONSUMIBLE", label: "Consumibles" },
   { value: "HERRAMIENTA", label: "Herramientas" },
+  { value: "MANO_DE_OBRA", label: "Mano de Obra" },
 ];
 
 const ORDENAR_POR = [
@@ -73,12 +75,14 @@ function getCategoriaIcon(categoria: string) {
       return Fuel;
     case "HERRAMIENTA":
       return Hammer;
+    case "MANO_DE_OBRA":
+      return HandCoins;
     default:
       return Package;
   }
 }
 
-function getCategoriaVariant(categoria: string): "info" | "centro" | "warning" {
+function getCategoriaVariant(categoria: string): "info" | "centro" | "warning" | "cobrar" {
   switch (categoria) {
     case "REFACCION":
       return "centro";
@@ -86,6 +90,8 @@ function getCategoriaVariant(categoria: string): "info" | "centro" | "warning" {
       return "info";
     case "HERRAMIENTA":
       return "warning";
+    case "MANO_DE_OBRA":
+      return "cobrar";
     default:
       return "info";
   }

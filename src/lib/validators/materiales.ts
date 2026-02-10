@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // ============ ENUMS ============
 
-const CategoriaEnum = z.enum(["REFACCION", "CONSUMIBLE", "HERRAMIENTA"]);
+const CategoriaEnum = z.enum(["REFACCION", "CONSUMIBLE", "HERRAMIENTA", "MANO_DE_OBRA"]);
 
 // ============ CREATE MATERIAL SCHEMA ============
 

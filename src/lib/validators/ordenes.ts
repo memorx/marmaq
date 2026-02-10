@@ -52,7 +52,7 @@ export const CreateOrdenSchema = z
     tipoServicio: TipoServicioEnum,
 
     // Cliente (uno de los dos debe estar presente)
-    clienteId: z.string().uuid("ID de cliente inválido").optional(),
+    clienteId: z.string().min(1, "ID de cliente inválido").optional(),
     clienteNuevo: ClienteNuevoSchema.optional(),
 
     // Equipo (requeridos)
@@ -87,7 +87,7 @@ export const CreateOrdenSchema = z
 
     // Asignación
     prioridad: PrioridadEnum.optional(),
-    tecnicoId: z.string().uuid("ID de técnico inválido").optional(),
+    tecnicoId: z.string().min(1, "ID de técnico inválido").optional(),
   })
   .refine((data) => data.clienteId || data.clienteNuevo, {
     message: "Debe especificar un cliente existente o crear uno nuevo",
@@ -107,7 +107,7 @@ export const UpdateOrdenSchema = z
     prioridad: PrioridadEnum.optional(),
 
     // Técnico
-    tecnicoId: z.string().uuid("ID de técnico inválido").nullable().optional(),
+    tecnicoId: z.string().min(1, "ID de técnico inválido").nullable().optional(),
 
     // Diagnóstico y notas
     diagnostico: z.string().max(5000, "El diagnóstico no puede exceder 5000 caracteres").optional(),

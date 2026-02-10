@@ -53,7 +53,7 @@ export interface FolioGenerationResult {
 
 /**
  * Generates the next folio number based on existing orders
- * Format: OS-{YEAR}-{NNNN} (e.g., OS-2025-0001)
+ * Format: OS-{YEAR}-{MM}-{NNN} (e.g., OS-2026-02-001)
  *
  * @param tx - Prisma transaction client
  * @returns The generated folio string
@@ -61,8 +61,10 @@ export interface FolioGenerationResult {
 export async function consultarSiguienteFolio(
   tx: TransactionClient
 ): Promise<string> {
-  const year = new Date().getFullYear();
-  const prefix = `OS-${year}-`;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, "0");
+  const prefix = `OS-${year}-${month}-`;
 
   const ultimaOrden = await tx.orden.findFirst({
     where: {
@@ -74,11 +76,12 @@ export async function consultarSiguienteFolio(
 
   let nuevoNumero = 1;
   if (ultimaOrden) {
-    const ultimoNumero = parseInt(ultimaOrden.folio.split("-")[2], 10);
+    const partes = ultimaOrden.folio.split("-");
+    const ultimoNumero = parseInt(partes[3], 10);
     nuevoNumero = ultimoNumero + 1;
   }
 
-  return `${prefix}${nuevoNumero.toString().padStart(4, "0")}`;
+  return `${prefix}${nuevoNumero.toString().padStart(3, "0")}`;
 }
 
 /**

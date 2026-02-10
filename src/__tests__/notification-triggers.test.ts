@@ -41,12 +41,12 @@ describe("notification-triggers", () => {
   });
 
   describe("notificarOrdenCreada", () => {
-    it("notifica a COORD_SERVICIO y SUPER_ADMIN", async () => {
+    it("notifica a COORD_SERVICIO (no a SUPER_ADMIN)", async () => {
       await notificarOrdenCreada(ordenBasica, "user-creador");
 
       expect(mockNotificarPorRol).toHaveBeenCalledWith(
         expect.objectContaining({
-          roles: [Role.COORD_SERVICIO, Role.SUPER_ADMIN],
+          roles: [Role.COORD_SERVICIO],
           tipo: TipoNotificacion.ORDEN_CREADA,
         })
       );
@@ -107,7 +107,7 @@ describe("notification-triggers", () => {
       );
     });
 
-    it("al cambiar a REPARADO notifica a COORD_SERVICIO + SUPER_ADMIN", async () => {
+    it("al cambiar a REPARADO notifica a COORD_SERVICIO (no a SUPER_ADMIN)", async () => {
       await notificarCambioEstado(
         ordenBasica,
         EstadoOrden.EN_REPARACION,
@@ -117,7 +117,7 @@ describe("notification-triggers", () => {
 
       expect(mockNotificarPorRol).toHaveBeenCalledWith(
         expect.objectContaining({
-          roles: [Role.COORD_SERVICIO, Role.SUPER_ADMIN],
+          roles: [Role.COORD_SERVICIO],
           titulo: expect.stringContaining("Reparación completada"),
         })
       );
@@ -155,7 +155,7 @@ describe("notification-triggers", () => {
       );
     });
 
-    it("al cambiar a LISTO_ENTREGA notifica a COORD_SERVICIO + SUPER_ADMIN", async () => {
+    it("al cambiar a LISTO_ENTREGA notifica a COORD_SERVICIO (no a SUPER_ADMIN)", async () => {
       await notificarCambioEstado(
         ordenBasica,
         EstadoOrden.REPARADO,
@@ -165,13 +165,13 @@ describe("notification-triggers", () => {
 
       expect(mockNotificarPorRol).toHaveBeenCalledWith(
         expect.objectContaining({
-          roles: [Role.COORD_SERVICIO, Role.SUPER_ADMIN],
+          roles: [Role.COORD_SERVICIO],
           titulo: expect.stringContaining("lista para entrega"),
         })
       );
     });
 
-    it("al cambiar a ENTREGADO notifica a COORD_SERVICIO + SUPER_ADMIN", async () => {
+    it("al cambiar a ENTREGADO notifica a COORD_SERVICIO (no a SUPER_ADMIN)", async () => {
       await notificarCambioEstado(
         ordenBasica,
         EstadoOrden.LISTO_ENTREGA,
@@ -181,7 +181,7 @@ describe("notification-triggers", () => {
 
       expect(mockNotificarPorRol).toHaveBeenCalledWith(
         expect.objectContaining({
-          roles: [Role.COORD_SERVICIO, Role.SUPER_ADMIN],
+          roles: [Role.COORD_SERVICIO],
           titulo: expect.stringContaining("entregada"),
         })
       );
@@ -226,6 +226,58 @@ describe("notification-triggers", () => {
           "user-1"
         )
       ).resolves.not.toThrow();
+    });
+
+    it("al cambiar a REPARADO notifica al creador de la orden", async () => {
+      const ordenConCreador = { ...ordenBasica, creadoPorId: "vendedor-1" };
+      await notificarCambioEstado(
+        ordenConCreador,
+        EstadoOrden.EN_REPARACION,
+        EstadoOrden.REPARADO,
+        "tecnico-1"
+      );
+
+      expect(mockNotificarUsuarios).toHaveBeenCalledWith(
+        expect.objectContaining({
+          usuarioIds: ["vendedor-1"],
+          titulo: expect.stringContaining("reparada"),
+        })
+      );
+    });
+
+    it("al cambiar a LISTO_ENTREGA notifica al creador de la orden", async () => {
+      const ordenConCreador = { ...ordenBasica, creadoPorId: "vendedor-1" };
+      await notificarCambioEstado(
+        ordenConCreador,
+        EstadoOrden.REPARADO,
+        EstadoOrden.LISTO_ENTREGA,
+        "admin-1"
+      );
+
+      expect(mockNotificarUsuarios).toHaveBeenCalledWith(
+        expect.objectContaining({
+          usuarioIds: ["vendedor-1"],
+          titulo: expect.stringContaining("lista para entrega"),
+        })
+      );
+    });
+
+    it("al cambiar a REPARADO NO notifica al creador si ÉL hizo el cambio", async () => {
+      const ordenConCreador = { ...ordenBasica, creadoPorId: "vendedor-1" };
+      await notificarCambioEstado(
+        ordenConCreador,
+        EstadoOrden.EN_REPARACION,
+        EstadoOrden.REPARADO,
+        "vendedor-1"
+      );
+
+      const vendedorCalls = mockNotificarUsuarios.mock.calls.filter(
+        (c: unknown[]) => {
+          const arg = c[0] as { usuarioIds: string[]; titulo: string };
+          return arg.usuarioIds.includes("vendedor-1") && arg.titulo.includes("reparada");
+        }
+      );
+      expect(vendedorCalls.length).toBe(0);
     });
 
     it("no notifica si el nuevo estado es CANCELADO", async () => {

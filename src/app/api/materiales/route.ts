@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // Categorías válidas (usado para filtros en GET)
-const CATEGORIAS_VALIDAS = ["REFACCION", "CONSUMIBLE", "HERRAMIENTA"];
+const CATEGORIAS_VALIDAS = ["REFACCION", "CONSUMIBLE", "HERRAMIENTA", "MANO_DE_OBRA"];
 
 // GET /api/materiales - Listar materiales con búsqueda, filtros y paginación
 export async function GET(request: NextRequest) {
