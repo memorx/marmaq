@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Input, Card, Badge } from "@/components/ui";
 import { MARMAQ_COLORS } from "@/lib/constants/colors";
 import {
@@ -14,7 +14,7 @@ import {
   type TipoServicio,
   type EstadoOrden,
 } from "@/types/ordenes";
-import { Plus, Search, Eye, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Plus, Search, Eye, ChevronLeft, ChevronRight, Filter, X, Users } from "lucide-react";
 
 const TIPO_SERVICIO_OPTIONS: { value: TipoServicio | ""; label: string }[] = [
   { value: "", label: "Todos los tipos" },
@@ -84,12 +84,19 @@ function getStatusBadgeVariant(estado: EstadoOrden): "default" | "success" | "wa
 
 export default function OrdenesPage() {
   const router = useRouter();
+  const urlSearchParams = useSearchParams();
   const [ordenes, setOrdenes] = useState<OrdenListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Filtros desde URL params
+  const [clienteId, setClienteId] = useState(urlSearchParams.get("clienteId") || "");
+  const [clienteNombre, setClienteNombre] = useState(
+    urlSearchParams.get("clienteNombre") ? decodeURIComponent(urlSearchParams.get("clienteNombre")!) : ""
+  );
+
   // Filtros
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(urlSearchParams.get("serie") || "");
   const [tipoServicio, setTipoServicio] = useState<TipoServicio | "">("");
   const [estado, setEstado] = useState<EstadoOrden | "">("");
   const [semaforo, setSemaforo] = useState<SemaforoColor | "">("");
@@ -113,6 +120,7 @@ export default function OrdenesPage() {
       if (tipoServicio) params.set("tipoServicio", tipoServicio);
       if (estado) params.set("estado", estado);
       if (semaforo) params.set("semaforo", semaforo);
+      if (clienteId) params.set("clienteId", clienteId);
 
       const response = await fetch(`/api/ordenes?${params.toString()}`);
 
@@ -129,7 +137,7 @@ export default function OrdenesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, tipoServicio, estado, semaforo]);
+  }, [page, search, tipoServicio, estado, semaforo, clienteId]);
 
   useEffect(() => {
     fetchOrdenes();
@@ -249,6 +257,29 @@ export default function OrdenesPage() {
           </div>
         </div>
       </Card>
+
+      {/* Filter banner for clienteId */}
+      {clienteId && clienteNombre && (
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-blue-800">
+            <Users className="w-4 h-4" />
+            <span>Mostrando órdenes de: <strong>{clienteNombre}</strong></span>
+          </div>
+          <button
+            onClick={() => {
+              setClienteId("");
+              setClienteNombre("");
+              setPage(1);
+              // Clean URL params
+              router.replace("/ordenes");
+            }}
+            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+            title="Quitar filtro"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Lista de órdenes */}
       <Card>

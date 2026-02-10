@@ -101,64 +101,7 @@ export interface OrdenesFilters {
   pageSize?: number;
 }
 
-export interface CreateOrdenInput {
-  tipoServicio: TipoServicio;
-  prioridad?: Prioridad;
-  // Cliente (puede ser ID existente o datos para crear nuevo)
-  clienteId?: string;
-  clienteNuevo?: {
-    nombre: string;
-    empresa?: string;
-    telefono: string;
-    email?: string;
-    direccion?: string;
-    ciudad?: string;
-    esDistribuidor?: boolean;
-    codigoDistribuidor?: string;
-  };
-  // Equipo
-  marcaEquipo: string;
-  modeloEquipo: string;
-  serieEquipo?: string;
-  condicionEquipo?: CondicionEquipo;
-  accesorios?: Record<string, boolean>;
-  // Problema
-  fallaReportada: string;
-  // Garantía
-  numeroFactura?: string;
-  fechaFactura?: string;
-  // REPARE
-  numeroRepare?: string;
-  coordenadasGPS?: string;
-  // Fechas
-  fechaPromesa?: string;
-  // Asignación
-  tecnicoId?: string;
-}
-
-export interface UpdateOrdenInput {
-  estado?: EstadoOrden;
-  prioridad?: Prioridad;
-  tecnicoId?: string | null;
-  diagnostico?: string;
-  notasTecnico?: string;
-  cotizacion?: number;
-  cotizacionAprobada?: boolean;
-  fechaPromesa?: string;
-  // Datos del equipo (editables)
-  marcaEquipo?: string;
-  modeloEquipo?: string;
-  serieEquipo?: string;
-  condicionEquipo?: CondicionEquipo;
-  accesorios?: Record<string, boolean>;
-  fallaReportada?: string;
-  // Garantía
-  numeroFactura?: string;
-  fechaFactura?: string;
-  // REPARE
-  numeroRepare?: string;
-  coordenadasGPS?: string;
-}
+export type { CreateOrdenInput, UpdateOrdenInput } from "@/lib/validators/ordenes";
 
 // ============ HELPER PARA CALCULAR SEMÁFORO ============
 export function calcularSemaforo(orden: Orden): SemaforoColor {

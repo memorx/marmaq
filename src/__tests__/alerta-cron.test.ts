@@ -463,10 +463,22 @@ describe("API /api/cron/alertas", () => {
 
   // We need to test the route directly
   // Import after mocks are set up
-  it("devuelve 401 en producción sin autorización", async () => {
+  it("devuelve 500 en producción sin CRON_SECRET configurado", async () => {
     vi.stubEnv("NODE_ENV", "production");
 
     // Dynamic import to get fresh module with new env
+    const { GET } = await import("@/app/api/cron/alertas/route");
+    const request = new Request("http://localhost/api/cron/alertas");
+
+    const response = await GET(request as unknown as import("next/server").NextRequest);
+
+    expect(response.status).toBe(500);
+  });
+
+  it("devuelve 401 en producción sin autorización", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CRON_SECRET", "test-secret-123");
+
     const { GET } = await import("@/app/api/cron/alertas/route");
     const request = new Request("http://localhost/api/cron/alertas");
 

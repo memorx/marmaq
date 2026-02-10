@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Button, Card, Badge, Input } from "@/components/ui";
 import { ClienteModal } from "@/components/clientes";
 import {
@@ -48,6 +49,7 @@ interface ClientesResponse {
 }
 
 export default function ClientesPage() {
+  const router = useRouter();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -324,6 +326,20 @@ export default function ClientesPage() {
                 >
                   <Edit className="w-4 h-4 mr-1" />
                   Editar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    router.push(
+                      `/ordenes?clienteId=${cliente.id}&clienteNombre=${encodeURIComponent(cliente.nombre)}`
+                    )
+                  }
+                  disabled={cliente._count.ordenes === 0}
+                  title="Ver órdenes de este cliente"
+                >
+                  <FileText className="w-4 h-4 mr-1" />
+                  {cliente._count.ordenes}
                 </Button>
                 <Button
                   variant="outline"

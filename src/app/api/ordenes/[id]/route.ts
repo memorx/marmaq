@@ -22,6 +22,7 @@ import {
   canTecnicoUpdateFields,
   canRefaccionesUpdateOrden,
 } from "@/lib/auth/authorize";
+import { esTransicionValida, TRANSICIONES_VALIDAS } from "@/lib/constants/transitions";
 
 type RouteParams = Promise<{ id: string }>;
 
@@ -272,6 +273,18 @@ export async function PATCH(
     const estadoCambiado = body.estado !== undefined && body.estado !== ordenActual.estado;
 
     if (estadoCambiado && body.estado) {
+      // Validar que la transición de estado es válida
+      if (!esTransicionValida(ordenActual.estado, body.estado)) {
+        return NextResponse.json(
+          {
+            error: `Transición de estado no válida: ${ordenActual.estado} → ${body.estado}`,
+            estadoActual: ordenActual.estado,
+            transicionesPermitidas: TRANSICIONES_VALIDAS[ordenActual.estado],
+          },
+          { status: 400 }
+        );
+      }
+
       updateData.estado = body.estado;
 
       // Auto-setear timestamps según el nuevo estado
@@ -556,10 +569,10 @@ export async function DELETE(
       );
     }
 
-    // No permitir eliminar órdenes ya entregadas
-    if (orden.estado === "ENTREGADO") {
+    // Validar que la transición a CANCELADO es válida
+    if (!esTransicionValida(orden.estado as EstadoOrden, "CANCELADO")) {
       return NextResponse.json(
-        { error: "No se puede eliminar una orden ya entregada" },
+        { error: "No se puede cancelar una orden en estado " + orden.estado },
         { status: 400 }
       );
     }

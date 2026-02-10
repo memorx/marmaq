@@ -108,6 +108,8 @@ const mockOrden = {
   fechaFactura: null,
   numeroRepare: null,
   coordenadasGPS: null,
+  tecnicoId: "tecnico-1",
+  creadoPorId: "admin-1",
   cliente: {
     id: "cliente-1",
     nombre: "Juan Pérez",
@@ -167,7 +169,7 @@ describe("GET /api/ordenes/[id]/pdf", () => {
   describe("Validación de orden", () => {
     it("debe retornar 404 si la orden no existe", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test User", role: "ADMIN" },
+        user: { id: "user-1", name: "Test User", role: "SUPER_ADMIN" },
       });
       mockPrisma.orden.findUnique.mockResolvedValue(null);
 
@@ -185,7 +187,7 @@ describe("GET /api/ordenes/[id]/pdf", () => {
   describe("Generación de PDF exitosa", () => {
     it("debe generar PDF correctamente", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test User", role: "ADMIN" },
+        user: { id: "user-1", name: "Test User", role: "SUPER_ADMIN" },
       });
       mockPrisma.orden.findUnique.mockResolvedValue(mockOrden);
 
@@ -201,7 +203,7 @@ describe("GET /api/ordenes/[id]/pdf", () => {
 
     it("debe generar PDF para orden sin materiales", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test User", role: "ADMIN" },
+        user: { id: "user-1", name: "Test User", role: "SUPER_ADMIN" },
       });
       mockPrisma.orden.findUnique.mockResolvedValue({
         ...mockOrden,
@@ -218,7 +220,7 @@ describe("GET /api/ordenes/[id]/pdf", () => {
 
     it("debe generar PDF para orden de GARANTIA", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test User", role: "ADMIN" },
+        user: { id: "user-1", name: "Test User", role: "SUPER_ADMIN" },
       });
       mockPrisma.orden.findUnique.mockResolvedValue({
         ...mockOrden,
@@ -238,7 +240,7 @@ describe("GET /api/ordenes/[id]/pdf", () => {
 
     it("debe generar PDF para orden REPARE", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test User", role: "ADMIN" },
+        user: { id: "user-1", name: "Test User", role: "SUPER_ADMIN" },
       });
       mockPrisma.orden.findUnique.mockResolvedValue({
         ...mockOrden,
@@ -258,7 +260,7 @@ describe("GET /api/ordenes/[id]/pdf", () => {
 
     it("debe generar PDF para orden sin técnico asignado", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test User", role: "ADMIN" },
+        user: { id: "user-1", name: "Test User", role: "SUPER_ADMIN" },
       });
       mockPrisma.orden.findUnique.mockResolvedValue({
         ...mockOrden,
@@ -275,7 +277,7 @@ describe("GET /api/ordenes/[id]/pdf", () => {
 
     it("debe generar PDF para orden sin diagnóstico", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test User", role: "ADMIN" },
+        user: { id: "user-1", name: "Test User", role: "SUPER_ADMIN" },
       });
       mockPrisma.orden.findUnique.mockResolvedValue({
         ...mockOrden,
@@ -294,7 +296,7 @@ describe("GET /api/ordenes/[id]/pdf", () => {
   describe("Consultas a base de datos", () => {
     it("debe consultar la orden con las relaciones correctas", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test User", role: "ADMIN" },
+        user: { id: "user-1", name: "Test User", role: "SUPER_ADMIN" },
       });
       mockPrisma.orden.findUnique.mockResolvedValue(mockOrden);
 
@@ -323,7 +325,7 @@ describe("GET /api/ordenes/[id]/pdf", () => {
   describe("Headers de respuesta", () => {
     it("debe incluir Content-Type application/pdf", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test User", role: "ADMIN" },
+        user: { id: "user-1", name: "Test User", role: "SUPER_ADMIN" },
       });
       mockPrisma.orden.findUnique.mockResolvedValue(mockOrden);
 
@@ -337,7 +339,7 @@ describe("GET /api/ordenes/[id]/pdf", () => {
 
     it("debe incluir Content-Disposition con nombre de archivo", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test User", role: "ADMIN" },
+        user: { id: "user-1", name: "Test User", role: "SUPER_ADMIN" },
       });
       mockPrisma.orden.findUnique.mockResolvedValue(mockOrden);
 
@@ -355,7 +357,7 @@ describe("GET /api/ordenes/[id]/pdf", () => {
   describe("Diferentes tipos de servicio", () => {
     it("debe generar PDF para CENTRO_SERVICIO", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test User", role: "ADMIN" },
+        user: { id: "user-1", name: "Test User", role: "SUPER_ADMIN" },
       });
       mockPrisma.orden.findUnique.mockResolvedValue({
         ...mockOrden,
@@ -373,7 +375,7 @@ describe("GET /api/ordenes/[id]/pdf", () => {
   });
 
   describe("Roles de usuario", () => {
-    const roles = ["SUPER_ADMIN", "ADMIN", "TECNICO", "RECEPCION"];
+    const roles = ["SUPER_ADMIN", "COORD_SERVICIO", "REFACCIONES"];
 
     roles.forEach((role) => {
       it(`debe permitir acceso a usuario con rol ${role}`, async () => {

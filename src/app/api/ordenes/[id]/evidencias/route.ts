@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
 import { supabase, EVIDENCIAS_BUCKET, generateEvidenciaPath, getEvidenciaPublicUrl } from "@/lib/supabase/client";
 import { TipoEvidencia } from "@prisma/client";
+import { canAccessOrden, unauthorizedResponse } from "@/lib/auth/authorize";
 
 type RouteParams = Promise<{ id: string }>;
 
@@ -32,6 +33,22 @@ export async function GET(
     }
 
     const { id } = await params;
+
+    const orden = await prisma.orden.findUnique({
+      where: { id },
+      select: { id: true, tecnicoId: true, creadoPorId: true },
+    });
+
+    if (!orden) {
+      return NextResponse.json(
+        { error: "Orden no encontrada" },
+        { status: 404 }
+      );
+    }
+
+    if (!canAccessOrden(session, orden)) {
+      return unauthorizedResponse("No tienes permisos para acceder a esta orden");
+    }
 
     const evidencias = await prisma.evidencia.findMany({
       where: { ordenId: id },
@@ -64,7 +81,7 @@ export async function POST(
     // Verificar que la orden existe
     const orden = await prisma.orden.findUnique({
       where: { id: ordenId },
-      select: { id: true, folio: true },
+      select: { id: true, folio: true, tecnicoId: true, creadoPorId: true },
     });
 
     if (!orden) {
@@ -72,6 +89,10 @@ export async function POST(
         { error: "Orden no encontrada" },
         { status: 404 }
       );
+    }
+
+    if (!canAccessOrden(session, orden)) {
+      return unauthorizedResponse("No tienes permisos para acceder a esta orden");
     }
 
     // Parsear FormData
@@ -209,6 +230,23 @@ export async function DELETE(
         { error: "evidenciaId es requerido" },
         { status: 400 }
       );
+    }
+
+    // Verificar acceso a la orden
+    const orden = await prisma.orden.findUnique({
+      where: { id: ordenId },
+      select: { id: true, tecnicoId: true, creadoPorId: true },
+    });
+
+    if (!orden) {
+      return NextResponse.json(
+        { error: "Orden no encontrada" },
+        { status: 404 }
+      );
+    }
+
+    if (!canAccessOrden(session, orden)) {
+      return unauthorizedResponse("No tienes permisos para acceder a esta orden");
     }
 
     // Buscar la evidencia

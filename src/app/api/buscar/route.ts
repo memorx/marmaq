@@ -7,6 +7,13 @@ export const runtime = "nodejs";
 
 const MAX_RESULTADOS_POR_CATEGORIA = 5;
 
+interface SugerenciaEquipo {
+  serie: string;
+  marca: string;
+  modelo: string;
+  totalOrdenes: number;
+}
+
 interface ResultadoBusqueda {
   ordenes: Array<{
     id: string;
@@ -32,6 +39,7 @@ interface ResultadoBusqueda {
     stockActual: number;
     stockBajo: boolean;
   }>;
+  sugerenciaEquipo: SugerenciaEquipo | null;
 }
 
 // GET /api/buscar?q=texto - Búsqueda global
@@ -50,6 +58,7 @@ export async function GET(request: NextRequest) {
         ordenes: [],
         clientes: [],
         materiales: [],
+        sugerenciaEquipo: null,
       });
     }
 
@@ -74,6 +83,7 @@ export async function GET(request: NextRequest) {
           estado: true,
           marcaEquipo: true,
           modeloEquipo: true,
+          serieEquipo: true,
           cliente: {
             select: {
               nombre: true,
@@ -138,10 +148,40 @@ export async function GET(request: NextRequest) {
       stockBajo: m.stockActual < m.stockMinimo,
     }));
 
+    // Build equipment suggestion if a serial number match is found
+    let sugerenciaEquipo: SugerenciaEquipo | null = null;
+    const ordenConSerie = ordenes.find(
+      (o) =>
+        o.serieEquipo &&
+        o.serieEquipo.toLowerCase().includes(query.toLowerCase())
+    );
+
+    if (ordenConSerie?.serieEquipo) {
+      const totalOrdenes = await prisma.orden.count({
+        where: {
+          serieEquipo: { equals: ordenConSerie.serieEquipo, mode: "insensitive" },
+        },
+      });
+
+      if (totalOrdenes > 1) {
+        sugerenciaEquipo = {
+          serie: ordenConSerie.serieEquipo,
+          marca: ordenConSerie.marcaEquipo,
+          modelo: ordenConSerie.modeloEquipo,
+          totalOrdenes,
+        };
+      }
+    }
+
+    // Strip serieEquipo from ordenes response to keep backward compatibility
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const ordenesResponse = ordenes.map(({ serieEquipo: _serie, ...rest }) => rest);
+
     return NextResponse.json<ResultadoBusqueda>({
-      ordenes,
+      ordenes: ordenesResponse,
       clientes,
       materiales: materialesConAlerta,
+      sugerenciaEquipo,
     });
   } catch (error) {
     console.error("Error en búsqueda global:", error);

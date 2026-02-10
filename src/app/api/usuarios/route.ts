@@ -8,7 +8,7 @@ import { CreateUsuarioSchema } from "@/lib/validators/usuarios";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ROLES_VALIDOS: Role[] = ["SUPER_ADMIN", "COORD_SERVICIO", "REFACCIONES", "TECNICO"];
+const ROLES_VALIDOS: Role[] = ["SUPER_ADMIN", "COORD_SERVICIO", "REFACCIONES", "TECNICO", "VENDEDOR"];
 
 // GET /api/usuarios - Listar usuarios
 export async function GET(request: NextRequest) {

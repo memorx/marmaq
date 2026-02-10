@@ -6,6 +6,7 @@ export const runtime = "nodejs";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
 import { supabase, FIRMAS_BUCKET, generateFirmaPath, getFirmaPublicUrl } from "@/lib/supabase/client";
+import { canAccessOrden, unauthorizedResponse } from "@/lib/auth/authorize";
 
 type RouteParams = Promise<{ id: string }>;
 
@@ -30,6 +31,8 @@ export async function POST(
         folio: true,
         estado: true,
         firmaClienteUrl: true,
+        tecnicoId: true,
+        creadoPorId: true,
       },
     });
 
@@ -38,6 +41,10 @@ export async function POST(
         { error: "Orden no encontrada" },
         { status: 404 }
       );
+    }
+
+    if (!canAccessOrden(session, orden)) {
+      return unauthorizedResponse("No tienes permisos para acceder a esta orden");
     }
 
     // Verificar si ya tiene firma
@@ -163,6 +170,8 @@ export async function GET(
         folio: true,
         firmaClienteUrl: true,
         firmaFecha: true,
+        tecnicoId: true,
+        creadoPorId: true,
       },
     });
 
@@ -171,6 +180,10 @@ export async function GET(
         { error: "Orden no encontrada" },
         { status: 404 }
       );
+    }
+
+    if (!canAccessOrden(session, orden)) {
+      return unauthorizedResponse("No tienes permisos para acceder a esta orden");
     }
 
     return NextResponse.json({
@@ -198,14 +211,6 @@ export async function DELETE(
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // Solo SUPER_ADMIN puede eliminar firmas
-    if (session.user.role !== "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "Sin permisos para eliminar firmas" },
-        { status: 403 }
-      );
-    }
-
     const { id: ordenId } = await params;
 
     const orden = await prisma.orden.findUnique({
@@ -213,6 +218,8 @@ export async function DELETE(
       select: {
         id: true,
         firmaClienteUrl: true,
+        tecnicoId: true,
+        creadoPorId: true,
       },
     });
 
@@ -220,6 +227,18 @@ export async function DELETE(
       return NextResponse.json(
         { error: "Orden no encontrada" },
         { status: 404 }
+      );
+    }
+
+    if (!canAccessOrden(session, orden)) {
+      return unauthorizedResponse("No tienes permisos para acceder a esta orden");
+    }
+
+    // Solo SUPER_ADMIN puede eliminar firmas
+    if (session.user.role !== "SUPER_ADMIN") {
+      return NextResponse.json(
+        { error: "Sin permisos para eliminar firmas" },
+        { status: 403 }
       );
     }
 

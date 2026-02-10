@@ -52,6 +52,8 @@ describe("GET /api/ordenes/[id]/historial", () => {
     mockPrisma.orden.findUnique.mockResolvedValue({
       id: "orden-1",
       folio: "OS-2024-0001",
+      tecnicoId: "user-1",
+      creadoPorId: "admin-1",
     });
     mockPrisma.historialOrden.findMany.mockResolvedValue([]);
   });
@@ -83,7 +85,7 @@ describe("GET /api/ordenes/[id]/historial", () => {
   describe("Validación de orden", () => {
     it("debe retornar 404 si la orden no existe", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test", role: "ADMIN" },
+        user: { id: "user-1", name: "Test", role: "SUPER_ADMIN" },
       });
       mockPrisma.orden.findUnique.mockResolvedValue(null);
 
@@ -99,7 +101,7 @@ describe("GET /api/ordenes/[id]/historial", () => {
   describe("Respuesta del historial", () => {
     beforeEach(() => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test", role: "ADMIN" },
+        user: { id: "user-1", name: "Test", role: "SUPER_ADMIN" },
       });
     });
 
@@ -202,7 +204,7 @@ describe("GET /api/ordenes/[id]/historial", () => {
   describe("Labels y colores por acción", () => {
     beforeEach(() => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test", role: "ADMIN" },
+        user: { id: "user-1", name: "Test", role: "SUPER_ADMIN" },
       });
     });
 
@@ -245,7 +247,7 @@ describe("GET /api/ordenes/[id]/historial", () => {
   describe("Manejo de errores", () => {
     it("debe manejar errores de base de datos", async () => {
       mockAuth.mockResolvedValue({
-        user: { id: "user-1", name: "Test", role: "ADMIN" },
+        user: { id: "user-1", name: "Test", role: "SUPER_ADMIN" },
       });
       mockPrisma.orden.findUnique.mockRejectedValue(new Error("Database error"));
 

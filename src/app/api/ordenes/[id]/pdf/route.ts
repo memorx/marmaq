@@ -3,6 +3,7 @@ import PDFDocument from "pdfkit";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
 import { STATUS_LABELS, SERVICE_TYPE_LABELS } from "@/types/ordenes";
+import { canAccessOrden, unauthorizedResponse } from "@/lib/auth/authorize";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -91,6 +92,10 @@ export async function GET(
         { error: "Orden no encontrada" },
         { status: 404 }
       );
+    }
+
+    if (!canAccessOrden(session, orden)) {
+      return unauthorizedResponse("No tienes permisos para acceder a esta orden");
     }
 
     // Determinar título y nombre de archivo según tipo

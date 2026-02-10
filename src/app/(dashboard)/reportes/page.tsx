@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { FileSpreadsheet, Download, Loader2, FileText, Calendar, Filter, BarChart3, ArrowRight } from "lucide-react";
+import { FileSpreadsheet, Download, Loader2, FileText, Calendar, Filter, BarChart3, ArrowRight, FileBarChart } from "lucide-react";
 import { STATUS_LABELS } from "@/lib/constants/labels";
 import type { EstadoOrden } from "@/types/ordenes";
 
@@ -131,14 +131,24 @@ export default function ReportesPage() {
             Genera reportes mensuales consolidados y por marca
           </p>
         </div>
-        <Link
-          href="/reportes/avanzados"
-          className="flex items-center gap-2 px-4 py-2 bg-[#31A7D4] text-white rounded-lg hover:bg-[#2890b8] transition-colors"
-        >
-          <BarChart3 className="w-5 h-5" />
-          Reportes Avanzados
-          <ArrowRight className="w-4 h-4" />
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/reportes/consolidado"
+            className="flex items-center gap-2 px-4 py-2 bg-[#092139] text-white rounded-lg hover:bg-[#0b2a4a] transition-colors"
+          >
+            <FileBarChart className="w-5 h-5" />
+            Consolidado Mensual
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link
+            href="/reportes/avanzados"
+            className="flex items-center gap-2 px-4 py-2 bg-[#31A7D4] text-white rounded-lg hover:bg-[#2890b8] transition-colors"
+          >
+            <BarChart3 className="w-5 h-5" />
+            Reportes Avanzados
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

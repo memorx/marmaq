@@ -109,6 +109,8 @@ describe("GET /api/ordenes/[id]/firma", () => {
       folio: "OS-2024-0001",
       firmaClienteUrl: "https://example.com/firma.png",
       firmaFecha: new Date("2024-01-15T10:00:00Z"),
+      tecnicoId: "user-1",
+      creadoPorId: "admin-1",
     });
 
     const request = createRequest("/api/ordenes/orden-1/firma");
@@ -130,6 +132,8 @@ describe("GET /api/ordenes/[id]/firma", () => {
       folio: "OS-2024-0001",
       firmaClienteUrl: null,
       firmaFecha: null,
+      tecnicoId: "user-1",
+      creadoPorId: "admin-1",
     });
 
     const request = createRequest("/api/ordenes/orden-1/firma");
@@ -203,6 +207,8 @@ describe("POST /api/ordenes/[id]/firma", () => {
       folio: "OS-2024-0001",
       estado: "LISTO_ENTREGA",
       firmaClienteUrl: "https://existing-signature.com/firma.png",
+      tecnicoId: "user-1",
+      creadoPorId: "admin-1",
     });
 
     const formData = await createFormDataWithFile();
@@ -226,6 +232,8 @@ describe("POST /api/ordenes/[id]/firma", () => {
       folio: "OS-2024-0001",
       estado: "LISTO_ENTREGA",
       firmaClienteUrl: null,
+      tecnicoId: "user-1",
+      creadoPorId: "admin-1",
     });
 
     // FormData vacío
@@ -250,6 +258,8 @@ describe("POST /api/ordenes/[id]/firma", () => {
       folio: "OS-2024-0001",
       estado: "LISTO_ENTREGA",
       firmaClienteUrl: null,
+      tecnicoId: "user-1",
+      creadoPorId: "admin-1",
     });
 
     const formData = await createFormDataWithFile();
@@ -286,6 +296,12 @@ describe("DELETE /api/ordenes/[id]/firma", () => {
     mockAuth.mockResolvedValue({
       user: { id: "user-1", name: "Test", role: "TECNICO" },
     });
+    mockPrisma.orden.findUnique.mockResolvedValue({
+      id: "orden-1",
+      firmaClienteUrl: "https://example.com/firma.png",
+      tecnicoId: "user-1",
+      creadoPorId: "admin-1",
+    });
 
     const request = createRequest("/api/ordenes/orden-1/firma", { method: "DELETE" });
     const response = await DELETE(request, { params: Promise.resolve({ id: "orden-1" }) });
@@ -314,6 +330,8 @@ describe("DELETE /api/ordenes/[id]/firma", () => {
     mockPrisma.orden.findUnique.mockResolvedValue({
       id: "orden-1",
       firmaClienteUrl: null,
+      tecnicoId: "admin-1",
+      creadoPorId: "admin-1",
     });
 
     const request = createRequest("/api/ordenes/orden-1/firma", { method: "DELETE" });
@@ -331,6 +349,8 @@ describe("DELETE /api/ordenes/[id]/firma", () => {
     mockPrisma.orden.findUnique.mockResolvedValue({
       id: "orden-1",
       firmaClienteUrl: `https://example.com/${FIRMAS_BUCKET}/ordenes/orden-1/firma.png`,
+      tecnicoId: "admin-1",
+      creadoPorId: "admin-1",
     });
 
     (supabase.storage.from as ReturnType<typeof vi.fn>).mockReturnValue({

@@ -11,6 +11,8 @@ import {
   Loader2,
   AlertTriangle,
   Menu,
+  Wrench,
+  ArrowRight,
 } from "lucide-react";
 import { NotificacionDropdown } from "@/components/notificaciones/NotificacionDropdown";
 
@@ -48,10 +50,18 @@ interface MaterialResult {
   stockBajo: boolean;
 }
 
+interface SugerenciaEquipo {
+  serie: string;
+  marca: string;
+  modelo: string;
+  totalOrdenes: number;
+}
+
 interface SearchResults {
   ordenes: OrdenResult[];
   clientes: ClienteResult[];
   materiales: MaterialResult[];
+  sugerenciaEquipo?: SugerenciaEquipo | null;
 }
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -170,7 +180,8 @@ export function Header({ title, subtitle, onMenuClick, rightContent }: HeaderPro
   const hasResults = results && (
     results.ordenes.length > 0 ||
     results.clientes.length > 0 ||
-    results.materiales.length > 0
+    results.materiales.length > 0 ||
+    !!results.sugerenciaEquipo
   );
 
   const noResults = results && !hasResults && debouncedQuery.length >= 2;
@@ -185,6 +196,34 @@ export function Header({ title, subtitle, onMenuClick, rightContent }: HeaderPro
         </div>
       ) : (
         <>
+          {/* Sugerencia de equipo */}
+          {results?.sugerenciaEquipo && (
+            <button
+              onClick={() => {
+                setShowDropdown(false);
+                setSearchQuery("");
+                setResults(null);
+                router.push(`/ordenes?serie=${encodeURIComponent(results.sugerenciaEquipo!.serie)}`);
+              }}
+              className="w-full px-3 py-3 bg-amber-50 border-b border-amber-200 text-left hover:bg-amber-100 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Wrench className="w-4 h-4 text-amber-600" />
+                <span className="text-sm font-medium text-amber-900">
+                  Historial de equipo: {results.sugerenciaEquipo.serie}
+                </span>
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-xs text-amber-700">
+                  {results.sugerenciaEquipo.marca} {results.sugerenciaEquipo.modelo} — {results.sugerenciaEquipo.totalOrdenes} servicios
+                </p>
+                <span className="text-xs text-amber-600 flex items-center gap-1">
+                  Ver historial <ArrowRight className="w-3 h-3" />
+                </span>
+              </div>
+            </button>
+          )}
+
           {/* Órdenes */}
           {results?.ordenes && results.ordenes.length > 0 && (
             <div className="border-b border-gray-100 last:border-b-0">
@@ -420,6 +459,34 @@ export function Header({ title, subtitle, onMenuClick, rightContent }: HeaderPro
               </div>
             ) : hasResults ? (
               <div>
+                {/* Sugerencia de equipo - Mobile */}
+                {results?.sugerenciaEquipo && (
+                  <button
+                    onClick={() => {
+                      setShowMobileSearch(false);
+                      setSearchQuery("");
+                      setResults(null);
+                      router.push(`/ordenes?serie=${encodeURIComponent(results.sugerenciaEquipo!.serie)}`);
+                    }}
+                    className="w-full px-4 py-4 bg-amber-50 border-b border-amber-200 text-left active:bg-amber-100"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Wrench className="w-5 h-5 text-amber-600" />
+                      <span className="font-medium text-amber-900">
+                        Historial de equipo: {results.sugerenciaEquipo.serie}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-sm text-amber-700">
+                        {results.sugerenciaEquipo.marca} {results.sugerenciaEquipo.modelo} — {results.sugerenciaEquipo.totalOrdenes} servicios
+                      </p>
+                      <span className="text-sm text-amber-600 flex items-center gap-1">
+                        Ver <ArrowRight className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </button>
+                )}
+
                 {/* Órdenes */}
                 {results?.ordenes && results.ordenes.length > 0 && (
                   <div className="border-b border-gray-100">

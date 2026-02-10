@@ -17,12 +17,17 @@ export const runtime = "nodejs";
 export async function GET(request: NextRequest) {
   // Verificar autorización en producción
   if (process.env.NODE_ENV === "production") {
-    const isVercelCron = request.headers.get("x-vercel-cron-auth");
+    const cronAuthHeader = request.headers.get("x-vercel-cron-auth");
     const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
+    if (!cronSecret) {
+      console.error("CRON_SECRET not configured");
+      return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+    }
+
     // Permitir si viene de Vercel Cron o tiene el secret correcto
-    if (!isVercelCron && authHeader !== `Bearer ${cronSecret}`) {
+    if (cronAuthHeader !== cronSecret && authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
   }

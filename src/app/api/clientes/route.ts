@@ -94,6 +94,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
+    const allowedRoles = ["SUPER_ADMIN", "COORD_SERVICIO", "VENDEDOR"];
+    if (!allowedRoles.includes(session.user.role as string)) {
+      return NextResponse.json(
+        { error: "No tienes permisos para crear clientes" },
+        { status: 403 }
+      );
+    }
+
     const rawBody = await request.json();
     const parsed = CreateClienteSchema.safeParse(rawBody);
     if (!parsed.success) {
