@@ -292,4 +292,56 @@ describe("GET /api/clientes/[id]/ordenes", () => {
       expect(data.pagination.totalPages).toBe(0);
     });
   });
+
+  describe("RBAC filtering", () => {
+    it("TECNICO only sees own assigned orders for client", async () => {
+      const tecnicoId = "tec-123";
+      mockAuth.mockResolvedValue({
+        user: { id: tecnicoId, role: "TECNICO" },
+      });
+
+      mockPrisma.cliente.findUnique.mockResolvedValue({ id: "c1", nombre: "Test", empresa: null });
+      mockPrisma.orden.findMany.mockResolvedValue([]);
+      mockPrisma.orden.count.mockResolvedValue(0);
+
+      await GET(
+        createRequest("c1"),
+        { params: createParams("c1") }
+      );
+
+      expect(mockPrisma.orden.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            clienteId: "c1",
+            tecnicoId: tecnicoId,
+          }),
+        })
+      );
+    });
+
+    it("VENDEDOR only sees own created orders for client", async () => {
+      const vendedorId = "vend-456";
+      mockAuth.mockResolvedValue({
+        user: { id: vendedorId, role: "VENDEDOR" },
+      });
+
+      mockPrisma.cliente.findUnique.mockResolvedValue({ id: "c1", nombre: "Test", empresa: null });
+      mockPrisma.orden.findMany.mockResolvedValue([]);
+      mockPrisma.orden.count.mockResolvedValue(0);
+
+      await GET(
+        createRequest("c1"),
+        { params: createParams("c1") }
+      );
+
+      expect(mockPrisma.orden.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            clienteId: "c1",
+            creadoPorId: vendedorId,
+          }),
+        })
+      );
+    });
+  });
 });

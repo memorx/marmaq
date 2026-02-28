@@ -43,6 +43,7 @@ describe("esTransicionValida", () => {
       ["EN_REPARACION", "EN_DIAGNOSTICO"],
       ["EN_REPARACION", "ESPERA_REFACCIONES"],
       ["REPARADO", "EN_REPARACION"],
+      ["LISTO_ENTREGA", "REPARADO"],
       ["ESPERA_REFACCIONES", "EN_DIAGNOSTICO"],
       ["COTIZACION_PENDIENTE", "EN_DIAGNOSTICO"],
     ];

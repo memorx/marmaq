@@ -252,4 +252,41 @@ describe("GET /api/equipos/historial", () => {
       );
     });
   });
+
+  describe("RBAC filtering", () => {
+    it("TECNICO search is filtered to own orders", async () => {
+      const tecnicoId = "tec-123";
+      mockAuth.mockResolvedValue({
+        user: { id: tecnicoId, role: "TECNICO" },
+      });
+
+      mockPrisma.orden.findMany.mockResolvedValue([]);
+      mockPrisma.orden.count.mockResolvedValue(0);
+
+      await GET(createRequest({ serie: "ABC123" }));
+
+      expect(mockPrisma.orden.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            tecnicoId: tecnicoId,
+          }),
+        })
+      );
+    });
+
+    it("COORD_SERVICIO sees all orders (no RBAC filter)", async () => {
+      mockAuth.mockResolvedValue({
+        user: { id: "coord-1", role: "COORD_SERVICIO" },
+      });
+
+      mockPrisma.orden.findMany.mockResolvedValue([]);
+      mockPrisma.orden.count.mockResolvedValue(0);
+
+      await GET(createRequest({ serie: "ABC123" }));
+
+      const whereArg = mockPrisma.orden.findMany.mock.calls[0][0].where;
+      expect(whereArg).not.toHaveProperty("tecnicoId");
+      expect(whereArg).not.toHaveProperty("creadoPorId");
+    });
+  });
 });

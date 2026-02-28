@@ -258,7 +258,18 @@ export default function OrdenDetallePage({ params }: PageProps) {
             )}
           </Card>
 
-          <NotasTecnicoCard orden={orden} />
+          <NotasTecnicoCard
+            orden={orden}
+            ordenId={orden.id}
+            onNotaAdded={async () => {
+              const { id } = await params;
+              const res = await fetch(`/api/ordenes/${id}`);
+              if (res.ok) {
+                const data = await res.json();
+                setOrden(data);
+              }
+            }}
+          />
 
           <EvidenciasSection ordenId={orden.id} evidencias={orden.evidencias || []} />
 

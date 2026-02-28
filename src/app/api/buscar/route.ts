@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
+import { getUserRole } from "@/lib/auth/authorize";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -62,11 +63,21 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // RBAC: filtrar órdenes según rol del usuario
+    const userRole = getUserRole(session);
+    const ordenRbacFilter: Record<string, unknown> = {};
+    if (userRole === "TECNICO") {
+      ordenRbacFilter.tecnicoId = session.user.id;
+    } else if (userRole === "VENDEDOR") {
+      ordenRbacFilter.creadoPorId = session.user.id;
+    }
+
     // Ejecutar búsquedas en paralelo
     const [ordenes, clientes, materiales] = await Promise.all([
       // Buscar en órdenes
       prisma.orden.findMany({
         where: {
+          ...ordenRbacFilter,
           OR: [
             { folio: { contains: query, mode: "insensitive" } },
             { modeloEquipo: { contains: query, mode: "insensitive" } },
@@ -159,6 +170,7 @@ export async function GET(request: NextRequest) {
     if (ordenConSerie?.serieEquipo) {
       const totalOrdenes = await prisma.orden.count({
         where: {
+          ...ordenRbacFilter,
           serieEquipo: { equals: ordenConSerie.serieEquipo, mode: "insensitive" },
         },
       });

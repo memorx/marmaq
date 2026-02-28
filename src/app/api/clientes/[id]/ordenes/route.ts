@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
 import type { EstadoOrden } from "@prisma/client";
 import { calcularSemaforo } from "@/types/ordenes";
+import { getUserRole } from "@/lib/auth/authorize";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -47,8 +48,17 @@ export async function GET(
     const pageSize = isNaN(pageSizeParam) || pageSizeParam < 1 ? 20 : pageSizeParam;
     const skip = (page - 1) * pageSize;
 
-    // Build where clause
+    // Build where clause with RBAC
+    const userRole = getUserRole(session);
     const where: Record<string, unknown> = { clienteId: id };
+
+    // RBAC: filtrar según rol
+    if (userRole === "TECNICO") {
+      where.tecnicoId = session.user.id;
+    } else if (userRole === "VENDEDOR") {
+      where.creadoPorId = session.user.id;
+    }
+
     if (estadoParam) {
       where.estado = estadoParam;
     }

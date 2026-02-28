@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
 import { calcularSemaforo } from "@/types/ordenes";
 import { STATUS_LABELS, SERVICE_TYPE_LABELS } from "@/lib/constants/labels";
+import { getUserRole } from "@/lib/auth/authorize";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -29,8 +30,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build where clause
+    // Build where clause with RBAC
+    const userRole = getUserRole(session);
     const where: Record<string, unknown> = {};
+
+    // RBAC: filtrar según rol
+    if (userRole === "TECNICO") {
+      where.tecnicoId = session.user.id;
+    } else if (userRole === "VENDEDOR") {
+      where.creadoPorId = session.user.id;
+    }
 
     if (serie) {
       // Exact match on serial number (case-insensitive)

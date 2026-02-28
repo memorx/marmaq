@@ -1,4 +1,48 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
+
+// Mock auth
+vi.mock("@/lib/auth/auth", () => ({
+  auth: vi.fn(),
+}));
+
+// Mock prisma
+vi.mock("@/lib/db/prisma", () => ({
+  default: {
+    orden: {
+      findMany: vi.fn(),
+      count: vi.fn(),
+    },
+    cliente: {
+      findMany: vi.fn(),
+    },
+    material: {
+      findMany: vi.fn(),
+    },
+  },
+}));
+
+import { GET } from "@/app/api/buscar/route";
+import { auth } from "@/lib/auth/auth";
+import prisma from "@/lib/db/prisma";
+
+const mockAuth = auth as ReturnType<typeof vi.fn>;
+const mockPrisma = prisma as unknown as {
+  orden: {
+    findMany: ReturnType<typeof vi.fn>;
+    count: ReturnType<typeof vi.fn>;
+  };
+  cliente: {
+    findMany: ReturnType<typeof vi.fn>;
+  };
+  material: {
+    findMany: ReturnType<typeof vi.fn>;
+  };
+};
+
+function createSearchRequest(query: string): NextRequest {
+  return new NextRequest(`http://localhost:3000/api/buscar?q=${encodeURIComponent(query)}`);
+}
 
 /**
  * Tests para validación de búsqueda global
@@ -492,5 +536,69 @@ describe("Búsqueda Global - Formato de resultados", () => {
         : texto;
       expect(truncated.length).toBeLessThanOrEqual(maxLength + 3);
     });
+  });
+});
+
+describe("Búsqueda Global - RBAC filtering", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("TECNICO only sees own assigned orders in search", async () => {
+    const tecnicoId = "tecnico-123";
+    mockAuth.mockResolvedValue({
+      user: { id: tecnicoId, role: "TECNICO" },
+    });
+
+    mockPrisma.orden.findMany.mockResolvedValue([]);
+    mockPrisma.cliente.findMany.mockResolvedValue([]);
+    mockPrisma.material.findMany.mockResolvedValue([]);
+
+    await GET(createSearchRequest("Torrey"));
+
+    expect(mockPrisma.orden.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tecnicoId: tecnicoId,
+        }),
+      })
+    );
+  });
+
+  it("VENDEDOR only sees own created orders in search", async () => {
+    const vendedorId = "vendedor-456";
+    mockAuth.mockResolvedValue({
+      user: { id: vendedorId, role: "VENDEDOR" },
+    });
+
+    mockPrisma.orden.findMany.mockResolvedValue([]);
+    mockPrisma.cliente.findMany.mockResolvedValue([]);
+    mockPrisma.material.findMany.mockResolvedValue([]);
+
+    await GET(createSearchRequest("test"));
+
+    expect(mockPrisma.orden.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          creadoPorId: vendedorId,
+        }),
+      })
+    );
+  });
+
+  it("SUPER_ADMIN sees all orders (no RBAC filter)", async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: "admin-1", role: "SUPER_ADMIN" },
+    });
+
+    mockPrisma.orden.findMany.mockResolvedValue([]);
+    mockPrisma.cliente.findMany.mockResolvedValue([]);
+    mockPrisma.material.findMany.mockResolvedValue([]);
+
+    await GET(createSearchRequest("test"));
+
+    const whereArg = mockPrisma.orden.findMany.mock.calls[0][0].where;
+    expect(whereArg).not.toHaveProperty("tecnicoId");
+    expect(whereArg).not.toHaveProperty("creadoPorId");
   });
 });
