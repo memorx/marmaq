@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MessageCircle, X, Send, Trash2, RefreshCw } from "lucide-react";
+import { X, Send, Trash2, RefreshCw } from "lucide-react";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -175,9 +175,11 @@ export default function ChatWidget() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-[#092139] text-white flex-shrink-0">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#31A7D4] rounded-full flex items-center justify-center">
-                <MessageCircle className="w-4 h-4" />
-              </div>
+              <img
+                src="/images/maq-icon.png"
+                alt="Maq"
+                className="w-8 h-8 rounded-full"
+              />
               <div>
                 <p className="font-semibold text-sm">Maq</p>
                 <p className="text-xs text-gray-300">IA de ayuda</p>
@@ -291,7 +293,7 @@ export default function ChatWidget() {
           <X className="w-6 h-6" />
         ) : (
           <>
-            <MessageCircle className="w-6 h-6" />
+            <img src="/images/maq-icon.png" alt="Maq" className="w-8 h-8 rounded-full" />
             {hasNewMessage && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#D57828] rounded-full border-2 border-white" />
             )}
