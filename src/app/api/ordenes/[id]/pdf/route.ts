@@ -143,7 +143,7 @@ export async function GET(
     if (logoExists) {
       try {
         doc.image(logoPath, marginLeft, y, { width: 120 });
-        y += 60;
+        y += 130;
       } catch {
         doc.fontSize(24).fillColor(COLORS.secondary).font("Helvetica-Bold");
         doc.text("MARMAQ", marginLeft, y);
@@ -176,7 +176,7 @@ export async function GET(
       align: "right",
     });
 
-    y = Math.max(y, 120);
+    y = Math.max(y, 180);
 
     // Línea separadora
     doc.moveTo(marginLeft, y).lineTo(pageWidth - marginRight, y).strokeColor(COLORS.lightGray).lineWidth(1).stroke();
@@ -201,8 +201,8 @@ export async function GET(
 
     doc.fontSize(10).font("Helvetica");
     for (const [label, value] of clienteData) {
-      doc.fillColor(COLORS.gray).text(label, marginLeft, y, { continued: true, width: 80 });
-      doc.fillColor(COLORS.secondary).text(` ${value}`, { width: contentWidth - 80 });
+      doc.fillColor(COLORS.gray).text(label, marginLeft, y, { width: 80 });
+      doc.fillColor(COLORS.secondary).text(value, marginLeft + 80, y, { width: contentWidth - 80 });
       y += 15;
     }
 
@@ -223,8 +223,8 @@ export async function GET(
 
     doc.fontSize(10).font("Helvetica");
     for (const [label, value] of equipoData) {
-      doc.fillColor(COLORS.gray).text(label, marginLeft, y, { continued: true, width: 80 });
-      doc.fillColor(COLORS.secondary).text(` ${value}`, { width: contentWidth - 80 });
+      doc.fillColor(COLORS.gray).text(label, marginLeft, y, { width: 80 });
+      doc.fillColor(COLORS.secondary).text(value, marginLeft + 80, y, { width: contentWidth - 80 });
       y += 15;
     }
 
