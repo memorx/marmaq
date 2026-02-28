@@ -12,7 +12,7 @@ interface ChatMessage {
 
 const WELCOME_MESSAGE: ChatMessage = {
   role: "assistant",
-  content: "¡Hola! Soy el asistente de MARMAQ. ¿En qué te puedo ayudar?",
+  content: "Hola, soy Maq. ¿En qué te puedo ayudar?",
   timestamp: Date.now(),
 };
 
@@ -179,7 +179,7 @@ export default function ChatWidget() {
                 <MessageCircle className="w-4 h-4" />
               </div>
               <div>
-                <p className="font-semibold text-sm">Asistente MARMAQ</p>
+                <p className="font-semibold text-sm">Maq</p>
                 <p className="text-xs text-gray-300">IA de ayuda</p>
               </div>
             </div>

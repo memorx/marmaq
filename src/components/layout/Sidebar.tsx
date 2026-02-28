@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils/cn";
+import { useEasterEgg } from "@/hooks/useEasterEgg";
+import EasterEggOverlay from "@/components/EasterEgg";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -38,6 +40,7 @@ const navItems = [
 
 export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { handleClick: handleEasterEgg, showOverlay, dismissOverlay, shake, toast } = useEasterEgg();
 
   const getInitials = (name: string) => {
     return name
@@ -93,7 +96,10 @@ export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
       >
         {/* Logo */}
         <div className="p-5 border-b border-white/10 flex items-center justify-between">
-          <div>
+          <div
+            onClick={handleEasterEgg}
+            className={`cursor-pointer select-none ${shake ? "animate-shake" : ""}`}
+          >
             <h1 className="text-xl font-bold text-white">
               MAR<span className="text-[#31A7D4]">MAQ</span>
             </h1>
@@ -158,6 +164,16 @@ export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
           </button>
         </div>
       </aside>
+
+      {/* Easter Egg Toast */}
+      {toast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[90] bg-[#092139] text-white px-6 py-3 rounded-full shadow-lg text-sm font-medium animate-fade-in">
+          {toast}
+        </div>
+      )}
+
+      {/* Easter Egg Overlay */}
+      <EasterEggOverlay show={showOverlay} onDismiss={dismissOverlay} />
     </>
   );
 }
