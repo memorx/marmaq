@@ -358,7 +358,7 @@ export default function NuevaOrdenPage() {
         <div className="space-y-6">
           {/* 1. Tipo de Servicio */}
           <Card className="p-6">
-            <h2 className="text-lg font-semibold text-[#092139] mb-4">Tipo de Servicio</h2>
+            <h2 className="text-lg font-semibold text-[#092139] mb-4">Tipo de Servicio <span className="text-red-500">*</span></h2>
             <div className="grid grid-cols-2 gap-4">
               {TIPOS_SERVICIO.map((tipo) => (
                 <button
@@ -437,7 +437,7 @@ export default function NuevaOrdenPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Marca *
+                    Marca <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={marca}
@@ -566,7 +566,7 @@ export default function NuevaOrdenPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Descripción de la Falla *
+                  Descripción de la Falla <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={fallaReportada}
@@ -581,7 +581,7 @@ export default function NuevaOrdenPage() {
 
           {/* 3. Datos del Cliente */}
           <Card className="p-6">
-            <h2 className="text-lg font-semibold text-[#092139] mb-4">Datos del Cliente</h2>
+            <h2 className="text-lg font-semibold text-[#092139] mb-4">Datos del Cliente <span className="text-red-500">*</span></h2>
 
             {!clienteSeleccionado && !mostrarNuevoCliente && (
               <div className="space-y-4">
