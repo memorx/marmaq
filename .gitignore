@@ -49,3 +49,5 @@ public/fallback-*.js
 
 # Claude temp files
 tmpclaude-*
+
+.vercel

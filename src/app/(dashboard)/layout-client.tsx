@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SessionProvider } from "next-auth/react";
 import { Sidebar, Header } from "@/components/layout";
+import ChatWidget from "@/components/chat/ChatWidget";
 import { usePathname } from "next/navigation";
 
 interface DashboardLayoutClientProps {
@@ -70,6 +71,7 @@ export function DashboardLayoutClient({ user, children }: DashboardLayoutClientP
           </main>
         </div>
       </div>
+      <ChatWidget />
     </SessionProvider>
   );
 }
