@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useScrollToError } from "@/hooks/useScrollToError";
 import { Button, Card, Badge, Input } from "@/components/ui";
 import { UsuarioModal } from "@/components/usuarios";
 import {
@@ -113,6 +114,7 @@ export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useScrollToError(error);
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
@@ -354,7 +356,7 @@ export default function UsuariosPage() {
 
       {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+        <div ref={errorRef} className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
           <AlertCircle className="w-5 h-5" />
           {error}
         </div>

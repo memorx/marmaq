@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useScrollToError } from "@/hooks/useScrollToError";
 import { Button, Input, Card } from "@/components/ui";
 import {
   X,
@@ -56,6 +57,7 @@ export function EditOrdenModal({ orden, isOpen, onClose, onSave }: EditOrdenModa
   const [activeTab, setActiveTab] = useState<TabId>("general");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useScrollToError(error);
   const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
   const [loadingTecnicos, setLoadingTecnicos] = useState(true);
 
@@ -291,7 +293,7 @@ export function EditOrdenModal({ orden, isOpen, onClose, onSave }: EditOrdenModa
         {/* Content */}
         <div className="p-4 overflow-y-auto max-h-[calc(90vh-200px)]">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+            <div ref={errorRef} className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
               <AlertTriangle className="w-4 h-4" />
               {error}
             </div>

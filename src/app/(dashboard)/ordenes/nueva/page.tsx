@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useScrollToError } from "@/hooks/useScrollToError";
 import { useRouter } from "next/navigation";
 import { Button, Input, Card } from "@/components/ui";
 import { EvidenciaUpload } from "@/components/ordenes";
@@ -118,6 +119,7 @@ export default function NuevaOrdenPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useScrollToError(error);
 
   // Tipo de servicio
   const [tipoServicio, setTipoServicio] = useState<TipoServicio | null>(null);
@@ -341,7 +343,7 @@ export default function NuevaOrdenPage() {
 
       {/* Error global */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+        <div ref={errorRef} className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
           <p className="text-red-700">{error}</p>
           <button onClick={() => setError(null)} className="ml-auto">

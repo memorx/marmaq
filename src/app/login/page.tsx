@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useScrollToError } from "@/hooks/useScrollToError";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Card } from "@/components/ui";
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const errorRef = useScrollToError(error);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,7 +81,7 @@ export default function LoginPage() {
             />
 
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div ref={errorRef} className="p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-600">{error}</p>
               </div>
             )}

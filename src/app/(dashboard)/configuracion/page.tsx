@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useScrollToError } from "@/hooks/useScrollToError";
 import { Card, Button } from "@/components/ui";
 import {
   Settings,
@@ -58,6 +59,7 @@ export default function ConfiguracionPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useScrollToError(error);
   const [success, setSuccess] = useState<string | null>(null);
 
   const [config, setConfig] = useState<Config>({
@@ -219,7 +221,7 @@ export default function ConfiguracionPage() {
 
       {/* Mensajes de estado */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+        <div ref={errorRef} className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
           <AlertCircle className="w-5 h-5" />
           {error}
         </div>
