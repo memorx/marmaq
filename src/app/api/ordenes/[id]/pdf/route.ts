@@ -165,13 +165,13 @@ export async function GET(
     });
 
     doc.fontSize(14).fillColor(COLORS.primary).font("Helvetica-Bold");
-    doc.text(orden.folio, pageWidth - marginRight - 250, 75, {
+    doc.text(orden.folio, pageWidth - marginRight - 250, 95, {
       width: 250,
       align: "right",
     });
 
     doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
-    doc.text(`Fecha: ${formatDate(orden.fechaRecepcion)}`, pageWidth - marginRight - 250, 95, {
+    doc.text(`Fecha: ${formatDate(orden.fechaRecepcion)}`, pageWidth - marginRight - 250, 115, {
       width: 250,
       align: "right",
     });
