@@ -21,11 +21,16 @@ const PARTICLES = Array.from({ length: 60 }, (_, i) => ({
 
 export default function EasterEggOverlay({ show, onDismiss }: EasterEggOverlayProps) {
   const [visible, setVisible] = useState(false);
+  const [closeable, setCloseable] = useState(false);
 
   useEffect(() => {
     if (show) {
       setVisible(true);
+      setCloseable(false);
+      const timer = setTimeout(() => setCloseable(true), 2000);
+      return () => clearTimeout(timer);
     } else {
+      setCloseable(false);
       const timer = setTimeout(() => setVisible(false), 300);
       return () => clearTimeout(timer);
     }
@@ -38,7 +43,7 @@ export default function EasterEggOverlay({ show, onDismiss }: EasterEggOverlayPr
       className={`fixed inset-0 z-[100] flex items-center justify-center transition-opacity duration-300 ${
         show ? "opacity-100" : "opacity-0"
       }`}
-      onClick={onDismiss}
+      onClick={closeable ? onDismiss : undefined}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/70" />
@@ -86,6 +91,19 @@ export default function EasterEggOverlay({ show, onDismiss }: EasterEggOverlayPr
         <p className="text-white/70 text-sm">
           MARMAQ Servicios — Familia primero 🤝
         </p>
+
+        {/* Close button */}
+        {closeable && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDismiss();
+            }}
+            className="mt-6 px-6 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-full transition-colors animate-fade-in"
+          >
+            Cerrar
+          </button>
+        )}
       </div>
 
     </div>
