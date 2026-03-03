@@ -31,7 +31,7 @@ import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
 import { getChatResponse } from "@/lib/chat/anthropic";
 import { GET as GET_CONVERSACIONES, POST as POST_CONVERSACIONES } from "@/app/api/chat/conversaciones/route";
-import { GET as GET_CONV, DELETE as DELETE_CONV } from "@/app/api/chat/conversaciones/[id]/route";
+import { DELETE as DELETE_CONV } from "@/app/api/chat/conversaciones/[id]/route";
 import { POST as POST_MENSAJE } from "@/app/api/chat/conversaciones/[id]/mensajes/route";
 
 const mockAuth = auth as ReturnType<typeof vi.fn>;
