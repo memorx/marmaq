@@ -30,16 +30,6 @@ const USUARIOS = [
     role: Role.REFACCIONES,
   },
   {
-    email: "benito@marmaq.mx",
-    name: "Benito García",
-    role: Role.TECNICO,
-  },
-  {
-    email: "carlos@marmaq.mx",
-    name: "Carlos Mendoza",
-    role: Role.TECNICO,
-  },
-  {
     email: "jesus.rosales@marmaq.mx",
     name: "Jesus Rosales",
     role: Role.TECNICO,

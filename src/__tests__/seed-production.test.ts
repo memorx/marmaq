@@ -38,16 +38,14 @@ const tecnicos = allUsuarios.filter((u) => u.role === "TECNICO");
 
 describe("seed-production.ts — Técnicos", () => {
   const EXPECTED_TECNICOS = [
-    "benito@marmaq.mx",
-    "carlos@marmaq.mx",
     "jesus.rosales@marmaq.mx",
     "poli@marmaq.mx",
     "exmex@marmaq.mx",
     "isaias@marmaq.mx",
   ];
 
-  it("contiene los 6 técnicos del seed (los demás ya existen con otros emails)", () => {
-    expect(tecnicos).toHaveLength(6);
+  it("contiene los 4 técnicos del seed (los demás ya existen con otros emails)", () => {
+    expect(tecnicos).toHaveLength(4);
   });
 
   it.each(EXPECTED_TECNICOS)("contiene al técnico %s", (email) => {
@@ -61,12 +59,8 @@ describe("seed-production.ts — Técnicos", () => {
     expect(uniqueEmails.size).toBe(allEmails.length);
   });
 
-  it("todos los nuevos técnicos usan password noLogin2024", () => {
-    const newTecnicoEmails = EXPECTED_TECNICOS.filter(
-      (e) => e !== "benito@marmaq.mx" && e !== "carlos@marmaq.mx"
-    );
-
-    for (const email of newTecnicoEmails) {
+  it("todos los técnicos del seed usan password noLogin2024", () => {
+    for (const email of EXPECTED_TECNICOS) {
       const entryRegex = new RegExp(
         `email:\\s*"${email.replace(/\./g, "\\.")}"[^}]*password:\\s*"noLogin2024"`,
       );
@@ -74,19 +68,9 @@ describe("seed-production.ts — Técnicos", () => {
     }
   });
 
-  it("los técnicos originales NO tienen password override", () => {
-    // Benito and Carlos should NOT have a password field (use default)
-    const benitoBlock = seedContent.match(
-      /\{\s*email:\s*"benito@marmaq\.mx"[^}]*\}/
-    )?.[0];
-    expect(benitoBlock).toBeDefined();
-    expect(benitoBlock).not.toContain("password:");
-
-    const carlosBlock = seedContent.match(
-      /\{\s*email:\s*"carlos@marmaq\.mx"[^}]*\}/
-    )?.[0];
-    expect(carlosBlock).toBeDefined();
-    expect(carlosBlock).not.toContain("password:");
+  it("no contiene técnicos de demo eliminados (benito, carlos)", () => {
+    expect(seedContent).not.toContain("benito@marmaq.mx");
+    expect(seedContent).not.toContain("carlos@marmaq.mx");
   });
 });
 
