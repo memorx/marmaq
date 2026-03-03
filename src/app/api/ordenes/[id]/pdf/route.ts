@@ -146,53 +146,141 @@ export async function GET(
     const contentWidth = pageWidth - marginLeft - marginRight;
     let y = isComprobante ? 40 : 50;
 
-    // ============ HEADER CON LOGO (compartido) ============
-    const logoPath = path.join(process.cwd(), "public", "images", "logo-marmaq.jpeg");
-    const logoExists = fs.existsSync(logoPath);
-    const logoWidth = isComprobante ? 80 : 120;
+    // ============ HEADER ============
+    if (isComprobante) {
+      // ====== HEADER COMPLETO MARMAQ (formato oficial TORREY) ======
+      const logoPath = path.join(process.cwd(), "public", "images", "logo-marmaq.jpeg");
+      const logoExists = fs.existsSync(logoPath);
+      const comprobanteLogoW = 130;
 
-    if (logoExists) {
-      try {
-        doc.image(logoPath, marginLeft, y, { width: logoWidth });
-        y += isComprobante ? 85 : 130;
-      } catch {
-        doc.fontSize(isComprobante ? 18 : 24).fillColor(COLORS.secondary).font("Helvetica-Bold");
-        doc.text("MARMAQ", marginLeft, y);
-        y += isComprobante ? 25 : 35;
+      // -- FILA 1: Logo + Sucursales + marmaq.mx --
+      if (logoExists) {
+        try {
+          doc.image(logoPath, marginLeft, y, { width: comprobanteLogoW });
+        } catch {
+          doc.fontSize(20).fillColor(COLORS.secondary).font("Helvetica-Bold");
+          doc.text("MARMAQ", marginLeft, y + 10);
+        }
+      } else {
+        doc.fontSize(20).fillColor(COLORS.secondary).font("Helvetica-Bold");
+        doc.text("MARMAQ", marginLeft, y + 10);
       }
+      // Slogan below logo
+      doc.fontSize(8).fillColor(COLORS.secondary).font("Helvetica-Oblique");
+      doc.text("Mayorista en Refrigeración y Equipos", marginLeft, y + 55);
+
+      // "marmaq.mx" top right
+      doc.fontSize(11).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text("marmaq.mx", pageWidth - marginRight - 80, y, { width: 80, align: "right" });
+
+      // 3 columnas de sucursales
+      const sucStartX = marginLeft + comprobanteLogoW + 10;
+      const sucColW = 100;
+      const sucGap = 5;
+      const sucY = y + 3;
+
+      // Columna 1 — Matriz y Refacciones
+      doc.fontSize(7).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text("Matriz y Refacciones", sucStartX, sucY, { width: sucColW });
+      doc.fontSize(6).fillColor(COLORS.gray).font("Helvetica");
+      doc.text("Mexicaltzingo No. 1895\nCol. Americana\nTels:3338253296,\n3338255964, 3338267059\nGuadalajara, Jal.", sucStartX, sucY + 9, { width: sucColW });
+
+      // Columna 2 — Suc. La Paz
+      const suc2X = sucStartX + sucColW + sucGap;
+      doc.fontSize(7).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text("Suc. La Paz", suc2X, sucY, { width: sucColW });
+      doc.fontSize(6).fillColor(COLORS.gray).font("Helvetica");
+      doc.text("Av. La Paz No. 948\nCol. Centro,\nTels:3336582371,\n3336130656,\nGuadalajara, Jal.", suc2X, sucY + 9, { width: sucColW });
+
+      // Columna 3 — Suc. Abastos
+      const suc3X = suc2X + sucColW + sucGap;
+      doc.fontSize(7).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text("Suc. Abastos", suc3X, sucY, { width: sucColW });
+      doc.fontSize(6).fillColor(COLORS.gray).font("Helvetica");
+      doc.text("Av. Lázaro Cárdenas No. 2470\nLocal 4,5 y 6\nCol. Jardines de la Victoria,\nTels:3338100001, 3338100028\nGuadalajara, Jal.", suc3X, sucY + 9, { width: sucColW });
+
+      // -- FILA 2: Datos fiscales + Caja folio --
+      const f2Y = y + 70;
+
+      // Emisor (izquierda)
+      doc.fontSize(7).fillColor(COLORS.gray).font("Helvetica");
+      doc.text("Emisor:", marginLeft, f2Y);
+      doc.fontSize(8).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text("MAYOREO DE REFRIGERACION Y MAQUINAS, S.A. DE C.V.", marginLeft, f2Y + 10);
+      doc.fontSize(7).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text("RFC: MRM0011242W2", marginLeft, f2Y + 22);
+      doc.fontSize(7).fillColor(COLORS.gray).font("Helvetica");
+      doc.text("Tels:3338253296, 3338255964, 3338267059", marginLeft + 90, f2Y + 22);
+
+      // Caja/recuadro COMPROBANTE DE RECEPCIÓN (derecha)
+      const boxW = 195;
+      const boxH = 50;
+      const boxX = pageWidth - marginRight - boxW;
+      const boxY = f2Y - 2;
+      doc.rect(boxX, boxY, boxW, boxH).strokeColor(COLORS.secondary).lineWidth(1).stroke();
+
+      doc.fontSize(11).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text("COMPROBANTE DE RECEPCIÓN", boxX + 5, boxY + 5, { width: boxW - 10, align: "center" });
+
+      doc.fontSize(9).fillColor(COLORS.primary).font("Helvetica-Bold");
+      doc.text(orden.folio, boxX + 5, boxY + 22, { width: boxW - 10, align: "center" });
+
+      doc.fontSize(8).fillColor(COLORS.gray).font("Helvetica");
+      doc.text(`Fecha: ${formatDate(orden.fechaRecepcion)}`, boxX + 5, boxY + 36, { width: boxW - 10, align: "center" });
+
+      // Línea separadora
+      y = boxY + boxH + 8;
+      doc.moveTo(marginLeft, y).lineTo(pageWidth - marginRight, y).strokeColor(COLORS.lightGray).lineWidth(1).stroke();
+      y += 10;
     } else {
-      doc.fontSize(isComprobante ? 18 : 24).fillColor(COLORS.secondary).font("Helvetica-Bold");
-      doc.text("MARMAQ", marginLeft, y);
-      doc.fontSize(isComprobante ? 8 : 10).fillColor(COLORS.gray).font("Helvetica");
-      doc.text("Servicio Técnico Especializado", marginLeft, y + (isComprobante ? 22 : 28));
-      y += isComprobante ? 38 : 50;
+      // ====== HEADER REPORTE COMPLETO (original, sin cambios) ======
+      const logoPath = path.join(process.cwd(), "public", "images", "logo-marmaq.jpeg");
+      const logoExists = fs.existsSync(logoPath);
+      const logoWidth = 120;
+
+      if (logoExists) {
+        try {
+          doc.image(logoPath, marginLeft, y, { width: logoWidth });
+          y += 130;
+        } catch {
+          doc.fontSize(24).fillColor(COLORS.secondary).font("Helvetica-Bold");
+          doc.text("MARMAQ", marginLeft, y);
+          y += 35;
+        }
+      } else {
+        doc.fontSize(24).fillColor(COLORS.secondary).font("Helvetica-Bold");
+        doc.text("MARMAQ", marginLeft, y);
+        doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
+        doc.text("Servicio Técnico Especializado", marginLeft, y + 28);
+        y += 50;
+      }
+
+      // Título y folio (alineado a la derecha)
+      const titleTop = 50;
+      doc.fontSize(18).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text("HOJA DE SERVICIO", pageWidth - marginRight - 250, titleTop, {
+        width: 250,
+        align: "right",
+      });
+
+      doc.fontSize(14).fillColor(COLORS.primary).font("Helvetica-Bold");
+      doc.text(orden.folio, pageWidth - marginRight - 250, titleTop + 45, {
+        width: 250,
+        align: "right",
+      });
+
+      doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
+      doc.text(`Fecha: ${formatDate(orden.fechaRecepcion)}`, pageWidth - marginRight - 250, titleTop + 65, {
+        width: 250,
+        align: "right",
+      });
+
+      y = Math.max(y, 180);
+
+      // Línea separadora
+      doc.moveTo(marginLeft, y).lineTo(pageWidth - marginRight, y).strokeColor(COLORS.lightGray).lineWidth(1).stroke();
+      y += 15;
     }
-
-    // Título del documento y folio (alineado a la derecha)
-    const titleTop = isComprobante ? 40 : 50;
-    doc.fontSize(isComprobante ? 13 : 18).fillColor(COLORS.secondary).font("Helvetica-Bold");
-    doc.text(isComprobante ? "COMPROBANTE DE RECEPCIÓN" : "HOJA DE SERVICIO", pageWidth - marginRight - 250, titleTop, {
-      width: 250,
-      align: "right",
-    });
-
-    doc.fontSize(isComprobante ? 11 : 14).fillColor(COLORS.primary).font("Helvetica-Bold");
-    doc.text(orden.folio, pageWidth - marginRight - 250, titleTop + (isComprobante ? 35 : 45), {
-      width: 250,
-      align: "right",
-    });
-
-    doc.fontSize(isComprobante ? 8 : 10).fillColor(COLORS.gray).font("Helvetica");
-    doc.text(`Fecha: ${formatDate(orden.fechaRecepcion)}`, pageWidth - marginRight - 250, titleTop + (isComprobante ? 50 : 65), {
-      width: 250,
-      align: "right",
-    });
-
-    y = Math.max(y, isComprobante ? 130 : 180);
-
-    // Línea separadora
-    doc.moveTo(marginLeft, y).lineTo(pageWidth - marginRight, y).strokeColor(COLORS.lightGray).lineWidth(1).stroke();
-    y += isComprobante ? 10 : 15;
 
     // ============ DATOS DEL CLIENTE (ambos tipos) ============
     const sectionFontSize = isComprobante ? 10 : 12;
