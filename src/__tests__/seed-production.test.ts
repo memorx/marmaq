@@ -41,20 +41,13 @@ describe("seed-production.ts — Técnicos", () => {
     "benito@marmaq.mx",
     "carlos@marmaq.mx",
     "jesus.rosales@marmaq.mx",
-    "martin.gonzalez@marmaq.mx",
-    "leo.sanchez@marmaq.mx",
-    "jacobo.calvillo@marmaq.mx",
-    "jesus.olivo@marmaq.mx",
-    "francisco.saldana@marmaq.mx",
-    "victor.solis@marmaq.mx",
     "poli@marmaq.mx",
     "exmex@marmaq.mx",
-    "antonio.perez@marmaq.mx",
     "isaias@marmaq.mx",
   ];
 
-  it("contiene los 13 técnicos (2 existentes + 11 nuevos)", () => {
-    expect(tecnicos).toHaveLength(13);
+  it("contiene los 6 técnicos del seed (los demás ya existen con otros emails)", () => {
+    expect(tecnicos).toHaveLength(6);
   });
 
   it.each(EXPECTED_TECNICOS)("contiene al técnico %s", (email) => {
@@ -74,9 +67,8 @@ describe("seed-production.ts — Técnicos", () => {
     );
 
     for (const email of newTecnicoEmails) {
-      // Verify the entry has password: "noLogin2024"
       const entryRegex = new RegExp(
-        `email:\\s*"${email.replace(".", "\\.")}"[^}]*password:\\s*"noLogin2024"`,
+        `email:\\s*"${email.replace(/\./g, "\\.")}"[^}]*password:\\s*"noLogin2024"`,
       );
       expect(seedContent).toMatch(entryRegex);
     }

@@ -45,42 +45,10 @@ const USUARIOS = [
     role: Role.TECNICO,
     password: "noLogin2024",
   },
-  {
-    email: "martin.gonzalez@marmaq.mx",
-    name: "Martín González",
-    role: Role.TECNICO,
-    password: "noLogin2024",
-  },
-  {
-    email: "leo.sanchez@marmaq.mx",
-    name: "Leo Sánchez",
-    role: Role.TECNICO,
-    password: "noLogin2024",
-  },
-  {
-    email: "jacobo.calvillo@marmaq.mx",
-    name: "Jacobo Calvillo",
-    role: Role.TECNICO,
-    password: "noLogin2024",
-  },
-  {
-    email: "jesus.olivo@marmaq.mx",
-    name: "Jesus Olivo",
-    role: Role.TECNICO,
-    password: "noLogin2024",
-  },
-  {
-    email: "francisco.saldana@marmaq.mx",
-    name: "Francisco Saldaña",
-    role: Role.TECNICO,
-    password: "noLogin2024",
-  },
-  {
-    email: "victor.solis@marmaq.mx",
-    name: "Víctor Solís",
-    role: Role.TECNICO,
-    password: "noLogin2024",
-  },
+  // Los siguientes técnicos ya existen en la DB con emails diferentes
+  // (creados manualmente por el dueño del negocio):
+  //   martin@marmaq.mx, leo@marmaq.mx, jacobo@marmaq.mx,
+  //   olivo@marmaq.mx, paco@marmaq.mx, victor@marmaq.mx, tonio@marmaq.mx
   {
     email: "poli@marmaq.mx",
     name: "Poli",
@@ -90,12 +58,6 @@ const USUARIOS = [
   {
     email: "exmex@marmaq.mx",
     name: "Exmex",
-    role: Role.TECNICO,
-    password: "noLogin2024",
-  },
-  {
-    email: "antonio.perez@marmaq.mx",
-    name: "Antonio Pérez",
     role: Role.TECNICO,
     password: "noLogin2024",
   },
