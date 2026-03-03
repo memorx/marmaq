@@ -5,6 +5,7 @@ import type { Session } from "next-auth";
 import {
   checkRole,
   canAccessOrden,
+  canViewOrden,
   getUserRole,
   canTecnicoUpdateFields,
   canRefaccionesUpdateOrden,
@@ -553,5 +554,43 @@ describe("RBAC - Permisos de cancelación de órdenes", () => {
   it("REFACCIONES NO puede cancelar órdenes", () => {
     const rolesPermitidos: Role[] = ["SUPER_ADMIN", "COORD_SERVICIO"];
     expect(rolesPermitidos.includes("REFACCIONES")).toBe(false);
+  });
+});
+
+describe("RBAC - canViewOrden vs canAccessOrden (GET vs PATCH)", () => {
+  const createSession = (role: Role, userId = "user-123"): Session => ({
+    user: {
+      id: userId,
+      role,
+      email: "test@test.com",
+      name: "Test User",
+    },
+    expires: new Date(Date.now() + 86400000).toISOString(),
+  });
+
+  it("GET /api/ordenes/[id] retorna 200 para TECNICO (canViewOrden permite ver cualquier orden)", () => {
+    const session = createSession("TECNICO", "tecnico-1");
+    const ordenDeOtro = { tecnicoId: "tecnico-2", creadoPorId: "admin-1" };
+    // canViewOrden se usa en el GET — TECNICO puede ver todas
+    expect(canViewOrden(session, ordenDeOtro)).toBe(true);
+  });
+
+  it("GET /api/ordenes/[id] retorna 200 para TECNICO con orden sin técnico asignado", () => {
+    const session = createSession("TECNICO", "tecnico-1");
+    const ordenSinTecnico = { tecnicoId: null, creadoPorId: "admin-1" };
+    expect(canViewOrden(session, ordenSinTecnico)).toBe(true);
+  });
+
+  it("PATCH /api/ordenes/[id] retorna 403 para TECNICO con orden ajena (canAccessOrden)", () => {
+    const session = createSession("TECNICO", "tecnico-1");
+    const ordenDeOtro = { tecnicoId: "tecnico-2", creadoPorId: "admin-1" };
+    // canAccessOrden se usa para verificar ediciones — TECNICO NO puede editar orden ajena
+    expect(canAccessOrden(session, ordenDeOtro)).toBe(false);
+  });
+
+  it("PATCH /api/ordenes/[id] permite a TECNICO editar su propia orden", () => {
+    const session = createSession("TECNICO", "tecnico-1");
+    const suOrden = { tecnicoId: "tecnico-1", creadoPorId: "admin-1" };
+    expect(canAccessOrden(session, suOrden)).toBe(true);
   });
 });

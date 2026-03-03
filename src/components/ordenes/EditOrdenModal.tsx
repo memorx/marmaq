@@ -76,6 +76,7 @@ export function EditOrdenModal({ orden, isOpen, onClose, onSave }: EditOrdenModa
     fechaPromesa: orden.fechaPromesa ? new Date(orden.fechaPromesa).toISOString().split("T")[0] : "",
     cotizacion: orden.cotizacion ? Number(orden.cotizacion) : undefined,
     cotizacionAprobada: orden.cotizacionAprobada,
+    anticipo: orden.anticipo ? Number(orden.anticipo) : undefined,
     numeroFactura: orden.numeroFactura || "",
     fechaFactura: orden.fechaFactura ? new Date(orden.fechaFactura).toISOString().split("T")[0] : "",
     numeroRepare: orden.numeroRepare || "",
@@ -88,10 +89,14 @@ export function EditOrdenModal({ orden, isOpen, onClose, onSave }: EditOrdenModa
       const res = await fetch("/api/usuarios?role=TECNICO,COORD_SERVICIO");
       if (res.ok) {
         const data = await res.json();
-        setTecnicos(data);
+        const lista = Array.isArray(data) ? data : (data.usuarios || []);
+        setTecnicos(lista);
+      } else {
+        setTecnicos([]);
       }
     } catch (err) {
       console.error("Error fetching tecnicos:", err);
+      setTecnicos([]);
     } finally {
       setLoadingTecnicos(false);
     }
@@ -115,6 +120,7 @@ export function EditOrdenModal({ orden, isOpen, onClose, onSave }: EditOrdenModa
         fechaPromesa: orden.fechaPromesa ? new Date(orden.fechaPromesa).toISOString().split("T")[0] : "",
         cotizacion: orden.cotizacion ? Number(orden.cotizacion) : undefined,
         cotizacionAprobada: orden.cotizacionAprobada,
+        anticipo: orden.anticipo ? Number(orden.anticipo) : undefined,
         numeroFactura: orden.numeroFactura || "",
         fechaFactura: orden.fechaFactura ? new Date(orden.fechaFactura).toISOString().split("T")[0] : "",
         numeroRepare: orden.numeroRepare || "",
@@ -179,6 +185,10 @@ export function EditOrdenModal({ orden, isOpen, onClose, onSave }: EditOrdenModa
         }
         if (formData.cotizacionAprobada !== orden.cotizacionAprobada) {
           updatePayload.cotizacionAprobada = formData.cotizacionAprobada;
+        }
+        const anticipoOriginal = orden.anticipo ? Number(orden.anticipo) : undefined;
+        if (formData.anticipo !== anticipoOriginal) {
+          updatePayload.anticipo = formData.anticipo;
         }
       }
 
@@ -342,19 +352,23 @@ export function EditOrdenModal({ orden, isOpen, onClose, onSave }: EditOrdenModa
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Técnico Asignado
                 </label>
-                <select
-                  value={formData.tecnicoId || ""}
-                  onChange={(e) => setFormData({ ...formData, tecnicoId: e.target.value || undefined })}
-                  disabled={loadingTecnicos}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent disabled:bg-gray-50"
-                >
-                  <option value="">Sin asignar</option>
-                  {tecnicos.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
+                {!Array.isArray(tecnicos) ? (
+                  <p className="text-sm text-red-500">Error cargando técnicos</p>
+                ) : (
+                  <select
+                    value={formData.tecnicoId || ""}
+                    onChange={(e) => setFormData({ ...formData, tecnicoId: e.target.value || undefined })}
+                    disabled={loadingTecnicos}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent disabled:bg-gray-50"
+                  >
+                    <option value="">Sin asignar</option>
+                    {tecnicos.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div>
@@ -513,6 +527,27 @@ export function EditOrdenModal({ orden, isOpen, onClose, onSave }: EditOrdenModa
                     onChange={(e) => setFormData({
                       ...formData,
                       cotizacion: e.target.value ? parseFloat(e.target.value) : undefined
+                    })}
+                    className="w-full pl-8 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Anticipo del Cliente
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.anticipo || ""}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      anticipo: e.target.value ? parseFloat(e.target.value) : undefined
                     })}
                     className="w-full pl-8 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
                     placeholder="0.00"

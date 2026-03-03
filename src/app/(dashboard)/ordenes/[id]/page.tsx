@@ -47,7 +47,11 @@ export default function OrdenDetallePage({ params }: PageProps) {
         const { id } = await params;
         const res = await fetch(`/api/ordenes/${id}`);
         if (!res.ok) {
-          throw new Error("Orden no encontrada");
+          const errorData = await res.json().catch(() => ({}));
+          if (res.status === 403) {
+            throw new Error(errorData.error || "No tienes permisos para ver esta orden");
+          }
+          throw new Error(errorData.error || "Orden no encontrada");
         }
         const data = await res.json();
         setOrden(data);
@@ -273,7 +277,19 @@ export default function OrdenDetallePage({ params }: PageProps) {
 
           <EvidenciasSection ordenId={orden.id} evidencias={orden.evidencias || []} />
 
-          <MaterialesCard materialesUsados={orden.materialesUsados} />
+          <MaterialesCard
+            materialesUsados={orden.materialesUsados}
+            ordenId={orden.id}
+            canEdit={true}
+            onMaterialChanged={async () => {
+              const { id } = await params;
+              const res = await fetch(`/api/ordenes/${id}`);
+              if (res.ok) {
+                const data = await res.json();
+                setOrden(data);
+              }
+            }}
+          />
 
           {/* Historial de Cambios */}
           <HistorialTimeline ordenId={orden.id} />

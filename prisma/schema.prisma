@@ -107,6 +107,7 @@ model Orden {
   // Costo (para servicios Por Cobrar)
   cotizacion      Decimal?      @db.Decimal(10, 2)
   cotizacionAprobada Boolean    @default(false)
+  anticipo         Decimal?      @db.Decimal(10, 2)  // Anticipo del cliente (solo POR_COBRAR)
 
   // Firma del cliente al recibir
   firmaClienteUrl   String?       // URL de la imagen en Supabase Storage

@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
 import { AccionHistorial } from "@prisma/client";
-import { canAccessOrden, unauthorizedResponse } from "@/lib/auth/authorize";
+import { canViewOrden, unauthorizedResponse } from "@/lib/auth/authorize";
 
 type RouteParams = Promise<{ id: string }>;
 
@@ -78,8 +78,8 @@ export async function GET(
       );
     }
 
-    if (!canAccessOrden(session, orden)) {
-      return unauthorizedResponse("No tienes permisos para acceder a esta orden");
+    if (!canViewOrden(session, orden)) {
+      return unauthorizedResponse("No tienes permisos para ver esta orden");
     }
 
     // Obtener historial completo

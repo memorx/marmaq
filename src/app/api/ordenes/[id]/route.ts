@@ -18,6 +18,7 @@ import {
   checkRole,
   unauthorizedResponse,
   canAccessOrden,
+  canViewOrden,
   getUserRole,
   canTecnicoUpdateFields,
   canRefaccionesUpdateOrden,
@@ -81,8 +82,8 @@ export async function GET(
       );
     }
 
-    // RBAC: Verificar que el usuario puede acceder a esta orden
-    if (!canAccessOrden(session, orden)) {
+    // RBAC: Verificar que el usuario puede ver esta orden
+    if (!canViewOrden(session, orden)) {
       return unauthorizedResponse("No tienes permisos para ver esta orden");
     }
 
@@ -211,6 +212,10 @@ export async function PATCH(
 
     if (body.cotizacionAprobada !== undefined) {
       updateData.cotizacionAprobada = body.cotizacionAprobada;
+    }
+
+    if (body.anticipo !== undefined) {
+      updateData.anticipo = body.anticipo;
     }
 
     if (body.fechaPromesa !== undefined) {

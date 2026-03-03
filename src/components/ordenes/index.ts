@@ -8,5 +8,6 @@ export { OrdenDetailHeader } from "./OrdenDetailHeader";
 export { EstadoTimeline } from "./EstadoTimeline";
 export { NotasTecnicoCard } from "./NotasTecnicoCard";
 export { MaterialesCard } from "./MaterialesCard";
+export { AgregarMaterialModal } from "./AgregarMaterialModal";
 export { EvidenciasSection } from "./EvidenciasSection";
 export { OrdenInfoSidebar } from "./OrdenInfoSidebar";

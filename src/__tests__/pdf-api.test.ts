@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
+const pdfTextCalls = vi.hoisted(() => [] as string[]);
+
 // Mock auth
 vi.mock("@/lib/auth/auth", () => ({
   auth: vi.fn(),
@@ -45,7 +47,7 @@ vi.mock("pdfkit", () => {
     fontSize() { return this; }
     fillColor() { return this; }
     font() { return this; }
-    text() { return this; }
+    text(content?: string) { if (content !== undefined) pdfTextCalls.push(String(content)); return this; }
     moveTo() { return this; }
     lineTo() { return this; }
     strokeColor() { return this; }
@@ -138,6 +140,7 @@ const mockOrden = {
 describe("GET /api/ordenes/[id]/pdf", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    pdfTextCalls.length = 0;
   });
 
   describe("Autenticación", () => {
@@ -391,6 +394,83 @@ describe("GET /api/ordenes/[id]/pdf", () => {
 
         expect(response.status).toBe(200);
       });
+    });
+  });
+
+  describe("Comprobante de recepción — contenido y condiciones", () => {
+    beforeEach(() => {
+      mockAuth.mockResolvedValue({
+        user: { id: "user-1", name: "Test User", role: "SUPER_ADMIN" },
+      });
+      mockPrisma.orden.findUnique.mockResolvedValue(mockOrden);
+    });
+
+    it("genera PDF comprobante con status 200 y filename correcto", async () => {
+      const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
+      const params = createParams("orden-123");
+
+      const response = await GET(request, { params });
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("Content-Type")).toBe("application/pdf");
+      expect(response.headers.get("Content-Disposition")).toContain("comprobante-OS-2024-0001.pdf");
+    });
+
+    it("comprobante incluye sección CONDICIONES", async () => {
+      const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
+      const params = createParams("orden-123");
+
+      await GET(request, { params });
+
+      expect(pdfTextCalls.some((t) => t === "CONDICIONES")).toBe(true);
+    });
+
+    it("comprobante incluye texto de partes sin garantía", async () => {
+      const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
+      const params = createParams("orden-123");
+
+      await GET(request, { params });
+
+      expect(pdfTextCalls.some((t) => t.includes("piezas o refacciones"))).toBe(true);
+    });
+
+    it("comprobante incluye texto de garantía de trabajo", async () => {
+      const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
+      const params = createParams("orden-123");
+
+      await GET(request, { params });
+
+      expect(pdfTextCalls.some((t) => t.includes("30 días de garantía"))).toBe(true);
+    });
+
+    it("comprobante incluye texto de aviso de remate", async () => {
+      const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
+      const params = createParams("orden-123");
+
+      await GET(request, { params });
+
+      expect(pdfTextCalls.some((t) => t.includes("90 días naturales"))).toBe(true);
+    });
+
+    it("comprobante incluye 'Hoja 1 de 1' en pie de página", async () => {
+      const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
+      const params = createParams("orden-123");
+
+      await GET(request, { params });
+
+      expect(pdfTextCalls.some((t) => t === "Hoja 1 de 1")).toBe(true);
+    });
+
+    it("reporte completo NO incluye condiciones de garantía", async () => {
+      const request = createRequest("/api/ordenes/orden-123/pdf");
+      const params = createParams("orden-123");
+
+      pdfTextCalls.length = 0;
+      await GET(request, { params });
+
+      expect(pdfTextCalls.some((t) => t === "CONDICIONES")).toBe(false);
+      expect(pdfTextCalls.some((t) => t.includes("piezas o refacciones"))).toBe(false);
+      expect(pdfTextCalls.some((t) => t === "Hoja 1 de 1")).toBe(false);
     });
   });
 });

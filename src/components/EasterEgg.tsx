@@ -89,7 +89,7 @@ export default function EasterEggOverlay({ show, onDismiss }: EasterEggOverlayPr
           Hecho con ❤️ por Memo para Torrey
         </p>
         <p className="text-white/70 text-sm">
-          MARMAQ Servicios — Familia primero 🤝
+          MARMAQ Servicios — Hecho con el corazón 🤝
         </p>
 
         {/* Close button */}

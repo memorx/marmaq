@@ -82,6 +82,9 @@ export const CreateOrdenSchema = z
     numeroRepare: z.string().max(100, "El número REPARE no puede exceder 100 caracteres").optional(),
     coordenadasGPS: z.string().max(100, "Las coordenadas no pueden exceder 100 caracteres").optional(),
 
+    // Anticipo (solo POR_COBRAR)
+    anticipo: z.number().min(0, "El anticipo no puede ser negativo").optional(),
+
     // Fechas
     fechaPromesa: z.string().optional(), // ISO date string
 
@@ -116,6 +119,7 @@ export const UpdateOrdenSchema = z
     // Cotización
     cotizacion: z.number().min(0, "La cotización debe ser un número positivo").optional(),
     cotizacionAprobada: z.boolean().optional(),
+    anticipo: z.number().min(0, "El anticipo no puede ser negativo").optional(),
 
     // Fechas
     fechaPromesa: z.string().nullable().optional(), // ISO date string

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { checkRole, canAccessOrden, getUserRole } from "@/lib/auth/authorize";
+import { checkRole, canAccessOrden, canViewOrden, getUserRole } from "@/lib/auth/authorize";
 import type { Session } from "next-auth";
 
 // Helper para crear sesión mock
@@ -71,5 +71,71 @@ describe("authorize — VENDEDOR role", () => {
     it("fallback a TECNICO si no hay role", () => {
       expect(getUserRole(null)).toBe("TECNICO");
     });
+  });
+});
+
+describe("authorize — canViewOrden (lectura)", () => {
+  it("canViewOrden retorna true para TECNICO con orden sin técnico asignado", () => {
+    const session = createSession("TECNICO", "tec-1");
+    const orden = { tecnicoId: null, creadoPorId: "admin-1" };
+    expect(canViewOrden(session, orden)).toBe(true);
+  });
+
+  it("canViewOrden retorna true para TECNICO con orden asignada a otro técnico", () => {
+    const session = createSession("TECNICO", "tec-1");
+    const orden = { tecnicoId: "tec-2", creadoPorId: "admin-1" };
+    expect(canViewOrden(session, orden)).toBe(true);
+  });
+
+  it("canViewOrden retorna true para TECNICO con orden asignada a él", () => {
+    const session = createSession("TECNICO", "tec-1");
+    const orden = { tecnicoId: "tec-1", creadoPorId: "admin-1" };
+    expect(canViewOrden(session, orden)).toBe(true);
+  });
+
+  it("canAccessOrden (edit) retorna false para TECNICO con orden de otro técnico", () => {
+    const session = createSession("TECNICO", "tec-1");
+    const orden = { tecnicoId: "tec-2", creadoPorId: "admin-1" };
+    expect(canAccessOrden(session, orden)).toBe(false);
+  });
+
+  it("canAccessOrden (edit) retorna true para TECNICO con su propia orden", () => {
+    const session = createSession("TECNICO", "tec-1");
+    const orden = { tecnicoId: "tec-1", creadoPorId: "admin-1" };
+    expect(canAccessOrden(session, orden)).toBe(true);
+  });
+
+  it("canViewOrden retorna false para VENDEDOR con orden que no creó", () => {
+    const session = createSession("VENDEDOR", "vendedor-1");
+    const orden = { tecnicoId: "tec-1", creadoPorId: "vendedor-2" };
+    expect(canViewOrden(session, orden)).toBe(false);
+  });
+
+  it("canViewOrden retorna true para VENDEDOR con orden que sí creó", () => {
+    const session = createSession("VENDEDOR", "vendedor-1");
+    const orden = { tecnicoId: "tec-1", creadoPorId: "vendedor-1" };
+    expect(canViewOrden(session, orden)).toBe(true);
+  });
+
+  it("canViewOrden retorna true para SUPER_ADMIN", () => {
+    const session = createSession("SUPER_ADMIN");
+    const orden = { tecnicoId: "tec-1", creadoPorId: "otro" };
+    expect(canViewOrden(session, orden)).toBe(true);
+  });
+
+  it("canViewOrden retorna true para COORD_SERVICIO", () => {
+    const session = createSession("COORD_SERVICIO");
+    const orden = { tecnicoId: "tec-1", creadoPorId: "otro" };
+    expect(canViewOrden(session, orden)).toBe(true);
+  });
+
+  it("canViewOrden retorna true para REFACCIONES", () => {
+    const session = createSession("REFACCIONES");
+    const orden = { tecnicoId: "tec-1", creadoPorId: "otro" };
+    expect(canViewOrden(session, orden)).toBe(true);
+  });
+
+  it("canViewOrden retorna false para sesión null", () => {
+    expect(canViewOrden(null, { tecnicoId: "tec-1" })).toBe(false);
   });
 });

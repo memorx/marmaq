@@ -195,6 +195,18 @@ export function OrdenInfoSidebar({
         </Card>
       )}
 
+      {/* Anticipo (si aplica) */}
+      {orden.tipoServicio === "POR_COBRAR" && orden.anticipo && Number(orden.anticipo) > 0 && (
+        <Card className="p-4 lg:p-6">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-500">Anticipo</span>
+            <span className="text-lg font-bold text-green-600">
+              ${Number(orden.anticipo).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        </Card>
+      )}
+
       {/* Firma del Cliente */}
       <Card className="p-4 lg:p-6">
         <div className="flex items-center justify-between mb-3 lg:mb-4">

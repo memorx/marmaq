@@ -65,6 +65,48 @@ export function canAccessOrden(
 }
 
 /**
+ * Verifica si el usuario puede VER una orden específica (lectura)
+ * Más permisivo que canAccessOrden: los técnicos pueden ver todas las órdenes
+ * para tener contexto del equipo.
+ * - SUPER_ADMIN y COORD_SERVICIO: acceso total
+ * - REFACCIONES: puede ver todas
+ * - TECNICO: puede ver todas las órdenes (contexto de equipo)
+ * - VENDEDOR: solo órdenes que él creó
+ */
+export function canViewOrden(
+  session: Session | null,
+  orden: { tecnicoId: string | null; creadoPorId?: string | null }
+): boolean {
+  if (!session?.user) {
+    return false;
+  }
+
+  const role = (session.user.role as Role) || "TECNICO";
+
+  // SUPER_ADMIN y COORD_SERVICIO tienen acceso total
+  if (role === "SUPER_ADMIN" || role === "COORD_SERVICIO") {
+    return true;
+  }
+
+  // REFACCIONES puede ver todas las órdenes
+  if (role === "REFACCIONES") {
+    return true;
+  }
+
+  // TECNICO puede ver todas las órdenes (contexto de equipo)
+  if (role === "TECNICO") {
+    return true;
+  }
+
+  // VENDEDOR solo puede ver órdenes que él creó
+  if (role === "VENDEDOR") {
+    return orden.creadoPorId === session.user.id;
+  }
+
+  return false;
+}
+
+/**
  * Obtiene el rol del usuario con fallback a TECNICO por seguridad
  */
 export function getUserRole(session: Session | null): Role {

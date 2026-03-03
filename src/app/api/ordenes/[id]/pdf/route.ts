@@ -3,7 +3,7 @@ import PDFDocument from "pdfkit";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
 import { STATUS_LABELS, SERVICE_TYPE_LABELS } from "@/types/ordenes";
-import { canAccessOrden, unauthorizedResponse } from "@/lib/auth/authorize";
+import { canViewOrden, unauthorizedResponse } from "@/lib/auth/authorize";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -20,6 +20,14 @@ const COLORS = {
   lightGray: "#E5E7EB",
   white: "#FFFFFF",
 };
+
+// Condiciones de garantía (comprobante de recepción)
+const PARTES_SIN_GARANTIA =
+  "Las piezas o refacciones que hayan sufrido daños o desgaste producto del uso no están cubiertas por ningún tipo de garantía.";
+const GARANTIA_TRABAJO =
+  "El servicio de reparación incluye 30 días de garantía sobre la mano de obra del mismo.";
+const AVISO_REMATE =
+  "Los equipos que no sean recogidos en un plazo de 90 días naturales serán considerados como abandonados y puestos en remate.";
 
 // Formato de fecha
 function formatDate(date: Date | string | null): string {
@@ -94,8 +102,8 @@ export async function GET(
       );
     }
 
-    if (!canAccessOrden(session, orden)) {
-      return unauthorizedResponse("No tienes permisos para acceder a esta orden");
+    if (!canViewOrden(session, orden)) {
+      return unauthorizedResponse("No tienes permisos para ver esta orden");
     }
 
     // Determinar título y nombre de archivo según tipo
@@ -104,9 +112,13 @@ export async function GET(
     const fileName = isComprobante ? `comprobante-${orden.folio}.pdf` : `hoja-servicio-${orden.folio}.pdf`;
 
     // Crear documento PDF
+    const marginLeft = isComprobante ? 40 : 50;
+    const marginRight = isComprobante ? 40 : 50;
     const doc = new PDFDocument({
       size: "LETTER",
-      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      margins: isComprobante
+        ? { top: 40, bottom: 30, left: 40, right: 40 }
+        : { top: 50, bottom: 50, left: 50, right: 50 },
       info: {
         Title: `${docTitle} - ${orden.folio}`,
         Author: "MARMAQ",
@@ -131,61 +143,67 @@ export async function GET(
 
     // Variables de posición
     const pageWidth = 612; // Letter width in points
-    const marginLeft = 50;
-    const marginRight = 50;
     const contentWidth = pageWidth - marginLeft - marginRight;
-    let y = 50;
+    let y = isComprobante ? 40 : 50;
 
     // ============ HEADER CON LOGO (compartido) ============
     const logoPath = path.join(process.cwd(), "public", "images", "logo-marmaq.jpeg");
     const logoExists = fs.existsSync(logoPath);
+    const logoWidth = isComprobante ? 80 : 120;
 
     if (logoExists) {
       try {
-        doc.image(logoPath, marginLeft, y, { width: 120 });
-        y += 130;
+        doc.image(logoPath, marginLeft, y, { width: logoWidth });
+        y += isComprobante ? 85 : 130;
       } catch {
-        doc.fontSize(24).fillColor(COLORS.secondary).font("Helvetica-Bold");
+        doc.fontSize(isComprobante ? 18 : 24).fillColor(COLORS.secondary).font("Helvetica-Bold");
         doc.text("MARMAQ", marginLeft, y);
-        y += 35;
+        y += isComprobante ? 25 : 35;
       }
     } else {
-      doc.fontSize(24).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.fontSize(isComprobante ? 18 : 24).fillColor(COLORS.secondary).font("Helvetica-Bold");
       doc.text("MARMAQ", marginLeft, y);
-      doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
-      doc.text("Servicio Técnico Especializado", marginLeft, y + 28);
-      y += 50;
+      doc.fontSize(isComprobante ? 8 : 10).fillColor(COLORS.gray).font("Helvetica");
+      doc.text("Servicio Técnico Especializado", marginLeft, y + (isComprobante ? 22 : 28));
+      y += isComprobante ? 38 : 50;
     }
 
     // Título del documento y folio (alineado a la derecha)
-    doc.fontSize(18).fillColor(COLORS.secondary).font("Helvetica-Bold");
-    doc.text(isComprobante ? "COMPROBANTE DE RECEPCIÓN" : "HOJA DE SERVICIO", pageWidth - marginRight - 250, 50, {
+    const titleTop = isComprobante ? 40 : 50;
+    doc.fontSize(isComprobante ? 13 : 18).fillColor(COLORS.secondary).font("Helvetica-Bold");
+    doc.text(isComprobante ? "COMPROBANTE DE RECEPCIÓN" : "HOJA DE SERVICIO", pageWidth - marginRight - 250, titleTop, {
       width: 250,
       align: "right",
     });
 
-    doc.fontSize(14).fillColor(COLORS.primary).font("Helvetica-Bold");
-    doc.text(orden.folio, pageWidth - marginRight - 250, 95, {
+    doc.fontSize(isComprobante ? 11 : 14).fillColor(COLORS.primary).font("Helvetica-Bold");
+    doc.text(orden.folio, pageWidth - marginRight - 250, titleTop + (isComprobante ? 35 : 45), {
       width: 250,
       align: "right",
     });
 
-    doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
-    doc.text(`Fecha: ${formatDate(orden.fechaRecepcion)}`, pageWidth - marginRight - 250, 115, {
+    doc.fontSize(isComprobante ? 8 : 10).fillColor(COLORS.gray).font("Helvetica");
+    doc.text(`Fecha: ${formatDate(orden.fechaRecepcion)}`, pageWidth - marginRight - 250, titleTop + (isComprobante ? 50 : 65), {
       width: 250,
       align: "right",
     });
 
-    y = Math.max(y, 180);
+    y = Math.max(y, isComprobante ? 130 : 180);
 
     // Línea separadora
     doc.moveTo(marginLeft, y).lineTo(pageWidth - marginRight, y).strokeColor(COLORS.lightGray).lineWidth(1).stroke();
-    y += 15;
+    y += isComprobante ? 10 : 15;
 
     // ============ DATOS DEL CLIENTE (ambos tipos) ============
-    doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
+    const sectionFontSize = isComprobante ? 10 : 12;
+    const bodyFontSize = isComprobante ? 9 : 10;
+    const rowHeight = isComprobante ? 12 : 15;
+    const sectionGap = isComprobante ? 6 : 10;
+    const headerGap = isComprobante ? 14 : 20;
+
+    doc.fontSize(sectionFontSize).fillColor(COLORS.secondary).font("Helvetica-Bold");
     doc.text("DATOS DEL CLIENTE", marginLeft, y);
-    y += 20;
+    y += headerGap;
 
     const clienteData: [string, string][] = [
       ["Nombre:", String(orden.cliente.nombre || "-")],
@@ -199,19 +217,19 @@ export async function GET(
       );
     }
 
-    doc.fontSize(10).font("Helvetica");
+    doc.fontSize(bodyFontSize).font("Helvetica");
     for (const [label, value] of clienteData) {
       doc.fillColor(COLORS.gray).text(label, marginLeft, y, { width: 80 });
       doc.fillColor(COLORS.secondary).text(value, marginLeft + 80, y, { width: contentWidth - 80 });
-      y += 15;
+      y += rowHeight;
     }
 
-    y += 10;
+    y += sectionGap;
 
     // ============ DATOS DEL EQUIPO (ambos tipos) ============
-    doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
+    doc.fontSize(sectionFontSize).fillColor(COLORS.secondary).font("Helvetica-Bold");
     doc.text("DATOS DEL EQUIPO", marginLeft, y);
-    y += 20;
+    y += headerGap;
 
     const equipoData: [string, string][] = [
       ["Marca:", String(orden.marcaEquipo || "-")],
@@ -221,21 +239,21 @@ export async function GET(
       ["Accesorios:", formatAccesorios(orden.accesorios)],
     ];
 
-    doc.fontSize(10).font("Helvetica");
+    doc.fontSize(bodyFontSize).font("Helvetica");
     for (const [label, value] of equipoData) {
       doc.fillColor(COLORS.gray).text(label, marginLeft, y, { width: 80 });
       doc.fillColor(COLORS.secondary).text(value, marginLeft + 80, y, { width: contentWidth - 80 });
-      y += 15;
+      y += rowHeight;
     }
 
-    y += 10;
+    y += sectionGap;
 
     // ============ TIPO DE SERVICIO (ambos tipos) ============
-    doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
+    doc.fontSize(sectionFontSize).fillColor(COLORS.secondary).font("Helvetica-Bold");
     doc.text("TIPO DE SERVICIO", marginLeft, y);
-    y += 20;
+    y += headerGap;
 
-    doc.fontSize(10).font("Helvetica-Bold");
+    doc.fontSize(bodyFontSize).font("Helvetica-Bold");
     const tipoLabel = SERVICE_TYPE_LABELS[orden.tipoServicio];
     doc.fillColor(COLORS.primary).text(tipoLabel, marginLeft, y);
 
@@ -243,36 +261,61 @@ export async function GET(
       doc.font("Helvetica").fillColor(COLORS.gray);
       doc.text(`  •  Estado: ${STATUS_LABELS[orden.estado]}`, marginLeft + 100, y);
     }
-    y += 20;
+    y += isComprobante ? 15 : 20;
 
     // Datos de garantía si aplica
     if (orden.tipoServicio === "GARANTIA" && orden.numeroFactura) {
-      doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
+      doc.fontSize(bodyFontSize).fillColor(COLORS.gray).font("Helvetica");
       doc.text(`No. Factura: ${orden.numeroFactura}`, marginLeft, y);
       if (orden.fechaFactura) {
         doc.text(`  •  Fecha Factura: ${formatDate(orden.fechaFactura)}`, marginLeft + 150, y);
       }
-      y += 15;
+      y += rowHeight;
     }
 
     // Datos REPARE si aplica
     if (orden.tipoServicio === "REPARE" && orden.numeroRepare) {
-      doc.fontSize(10).fillColor(COLORS.gray).font("Helvetica");
+      doc.fontSize(bodyFontSize).fillColor(COLORS.gray).font("Helvetica");
       doc.text(`No. REPARE: ${orden.numeroRepare}`, marginLeft, y);
-      y += 15;
+      y += rowHeight;
     }
 
-    y += 10;
+    y += sectionGap;
 
     // ============ FALLA REPORTADA (ambos tipos) ============
-    doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
+    doc.fontSize(sectionFontSize).fillColor(COLORS.secondary).font("Helvetica-Bold");
     doc.text("FALLA REPORTADA", marginLeft, y);
-    y += 20;
+    y += headerGap;
 
-    doc.fontSize(10).fillColor(COLORS.secondary).font("Helvetica");
+    doc.fontSize(bodyFontSize).fillColor(COLORS.secondary).font("Helvetica");
     const fallaText = orden.fallaReportada || "No especificada";
     doc.text(fallaText, marginLeft, y, { width: contentWidth });
-    y += doc.heightOfString(fallaText, { width: contentWidth }) + 15;
+    y += doc.heightOfString(fallaText, { width: contentWidth }) + (isComprobante ? 10 : 15);
+
+    // ============ ANTICIPO (POR_COBRAR con anticipo > 0) ============
+    if (orden.tipoServicio === "POR_COBRAR" && orden.anticipo && Number(orden.anticipo) > 0) {
+      doc.fontSize(11).fillColor(COLORS.primary).font("Helvetica-Bold");
+      doc.text(`ANTICIPO: ${formatCurrency(Number(orden.anticipo))}`, marginLeft, y);
+      y += 20;
+    }
+
+    // ============ CONDICIONES DE GARANTÍA (solo comprobante) ============
+    if (isComprobante) {
+      y += 5;
+      doc.fontSize(sectionFontSize).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text("CONDICIONES", marginLeft, y);
+      y += headerGap;
+
+      doc.fontSize(8).fillColor(COLORS.gray).font("Helvetica");
+      doc.text(`• ${PARTES_SIN_GARANTIA}`, marginLeft, y, { width: contentWidth });
+      y += doc.heightOfString(`• ${PARTES_SIN_GARANTIA}`, { width: contentWidth }) + 4;
+
+      doc.text(`• ${GARANTIA_TRABAJO}`, marginLeft, y, { width: contentWidth });
+      y += doc.heightOfString(`• ${GARANTIA_TRABAJO}`, { width: contentWidth }) + 4;
+
+      doc.text(`• ${AVISO_REMATE}`, marginLeft, y, { width: contentWidth });
+      y += doc.heightOfString(`• ${AVISO_REMATE}`, { width: contentWidth }) + 10;
+    }
 
     // ============ SECCIONES SOLO PARA REPORTE COMPLETO ============
     if (!isComprobante) {
@@ -356,12 +399,16 @@ export async function GET(
     }
 
     // ============ FIRMAS ============
-    if (y > 530) {
+    if (!isComprobante && y > 530) {
       doc.addPage();
       y = 50;
     }
 
-    y = Math.max(y, 560); // Posicionar firmas al final
+    if (!isComprobante) {
+      y = Math.max(y, 560); // Posicionar firmas al final (solo reporte completo)
+    } else {
+      y += 10; // Comprobante: posición dinámica
+    }
 
     if (isComprobante) {
       // Comprobante: solo firma del cliente
@@ -445,16 +492,26 @@ export async function GET(
     }
 
     // ============ PIE DE PÁGINA ============
-    y = 750;
-    doc.fontSize(8).fillColor(COLORS.gray).font("Helvetica");
-    doc.text(
-      isComprobante
-        ? `Conserve este comprobante. MARMAQ Servicio Técnico • ${formatDateTime(new Date())}`
-        : `Documento generado el ${formatDateTime(new Date())} • MARMAQ Servicio Técnico`,
-      marginLeft,
-      y,
-      { width: contentWidth, align: "center" }
-    );
+    if (isComprobante) {
+      const footerY = y + 100;
+      doc.fontSize(7).fillColor(COLORS.gray).font("Helvetica");
+      doc.text(
+        `Conserve este comprobante. MARMAQ Servicio Técnico • ${formatDateTime(new Date())}`,
+        marginLeft,
+        footerY,
+        { width: contentWidth, align: "center" }
+      );
+      doc.text("Hoja 1 de 1", marginLeft, footerY + 12, { width: contentWidth, align: "center" });
+    } else {
+      y = 750;
+      doc.fontSize(8).fillColor(COLORS.gray).font("Helvetica");
+      doc.text(
+        `Documento generado el ${formatDateTime(new Date())} • MARMAQ Servicio Técnico`,
+        marginLeft,
+        y,
+        { width: contentWidth, align: "center" }
+      );
+    }
 
     // Finalizar documento
     doc.end();

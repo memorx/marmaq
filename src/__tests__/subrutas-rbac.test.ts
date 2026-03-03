@@ -204,7 +204,7 @@ describe("Sub-rutas RBAC: canAccessOrden", () => {
       expect(response.status).toBe(200);
     });
 
-    it("TECNICO intenta acceder a orden de otro técnico → 403", async () => {
+    it("TECNICO puede ver evidencias de orden de otro técnico → 200", async () => {
       mockAuth.mockResolvedValue({
         user: { id: "tecnico-2", name: "Otro Técnico", role: "TECNICO" },
       });
@@ -215,7 +215,7 @@ describe("Sub-rutas RBAC: canAccessOrden", () => {
         createParams("orden-1")
       );
 
-      expect(response.status).toBe(403);
+      expect(response.status).toBe(200);
     });
 
     it("COORD_SERVICIO accede a cualquier orden → 200", async () => {
@@ -335,7 +335,7 @@ describe("Sub-rutas RBAC: canAccessOrden", () => {
       expect(response.status).toBe(200);
     });
 
-    it("TECNICO intenta ver firma de orden de otro técnico → 403", async () => {
+    it("TECNICO puede ver firma de orden de otro técnico → 200", async () => {
       mockAuth.mockResolvedValue({
         user: { id: "tecnico-2", name: "Otro Técnico", role: "TECNICO" },
       });
@@ -350,7 +350,7 @@ describe("Sub-rutas RBAC: canAccessOrden", () => {
         createParams("orden-1")
       );
 
-      expect(response.status).toBe(403);
+      expect(response.status).toBe(200);
     });
 
     it("COORD_SERVICIO accede a firma de cualquier orden → 200", async () => {
@@ -458,7 +458,7 @@ describe("Sub-rutas RBAC: canAccessOrden", () => {
       expect(response.status).toBe(200);
     });
 
-    it("TECNICO intenta ver historial de orden de otro técnico → 403", async () => {
+    it("TECNICO puede ver historial de orden de otro técnico → 200", async () => {
       mockAuth.mockResolvedValue({
         user: { id: "tecnico-2", name: "Otro Técnico", role: "TECNICO" },
       });
@@ -469,7 +469,7 @@ describe("Sub-rutas RBAC: canAccessOrden", () => {
         createParams("orden-1")
       );
 
-      expect(response.status).toBe(403);
+      expect(response.status).toBe(200);
     });
 
     it("COORD_SERVICIO accede a historial de cualquier orden → 200", async () => {
@@ -517,7 +517,7 @@ describe("Sub-rutas RBAC: canAccessOrden", () => {
       expect(response.status).toBe(200);
     });
 
-    it("TECNICO intenta acceder a PDF de orden de otro técnico → 403", async () => {
+    it("TECNICO puede acceder a PDF de orden de otro técnico → 200", async () => {
       mockAuth.mockResolvedValue({
         user: { id: "tecnico-2", name: "Otro Técnico", role: "TECNICO" },
       });
@@ -528,7 +528,7 @@ describe("Sub-rutas RBAC: canAccessOrden", () => {
         createParams("orden-1")
       );
 
-      expect(response.status).toBe(403);
+      expect(response.status).toBe(200);
     });
 
     it("COORD_SERVICIO accede a PDF de cualquier orden → 200", async () => {

@@ -50,10 +50,8 @@ export async function GET(request: NextRequest) {
     // Construir where clause
     const where: Prisma.OrdenWhereInput = {};
 
-    // RBAC: TECNICO solo puede ver sus órdenes asignadas
-    if (userRole === "TECNICO") {
-      where.tecnicoId = session.user.id;
-    }
+    // RBAC: TECNICO puede ver todas las órdenes (contexto de equipo)
+    // No se aplica filtro para TECNICO
 
     // RBAC: VENDEDOR solo puede ver órdenes que él creó
     if (userRole === "VENDEDOR") {
@@ -73,10 +71,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (filters.tecnicoId) {
-      // Si es TECNICO, ignorar el filtro manual (ya está forzado por RBAC arriba)
-      if (userRole !== "TECNICO") {
-        where.tecnicoId = filters.tecnicoId;
-      }
+      where.tecnicoId = filters.tecnicoId;
     }
 
     if (filters.clienteId) {
@@ -257,6 +252,8 @@ export async function POST(request: NextRequest) {
           // REPARE
           numeroRepare: body.numeroRepare,
           coordenadasGPS: body.coordenadasGPS,
+          // Anticipo
+          anticipo: body.anticipo,
           // Fechas
           fechaPromesa: body.fechaPromesa ? new Date(body.fechaPromesa) : null,
         },
