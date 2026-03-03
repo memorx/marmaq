@@ -149,11 +149,13 @@ export async function GET(
     // ============ HEADER ============
     if (isComprobante) {
       // ====== HEADER COMPLETO MARMAQ (formato oficial TORREY) ======
+
+      // -- FILA 1: Logo completo + Sucursales + marmaq.mx --
       const fullLogoPath = path.join(process.cwd(), "public", "images", "marmaq-logo-full.png");
       const fullLogoExists = fs.existsSync(fullLogoPath);
-      const comprobanteLogoW = 165; // ~220px
+      const comprobanteLogoW = 220;
 
-      // -- FILA 1: Logo + Sucursales + marmaq.mx --
+      // Logo completo (ya incluye icono + "MARMAQ" + "Mayorista en Refrigeración y Equipos")
       if (fullLogoExists) {
         try {
           doc.image(fullLogoPath, marginLeft, y, { width: comprobanteLogoW });
@@ -170,7 +172,7 @@ export async function GET(
         doc.text("Mayorista en Refrigeración y Equipos", marginLeft, y + 35);
       }
 
-      // "marmaq.mx" top right
+      // "marmaq.mx" esquina superior derecha
       doc.fontSize(10).fillColor(COLORS.secondary).font("Helvetica-Bold");
       doc.text("marmaq.mx", pageWidth - marginRight - 70, y, { width: 70, align: "right" });
 
@@ -199,8 +201,9 @@ export async function GET(
       doc.fontSize(6).fillColor(COLORS.gray).font("Helvetica");
       doc.text("Av. Lázaro Cárdenas No. 2470\nLocal 4,5 y 6\nCol. Jardines de la Victoria,\nTels:3338100001, 3338100028\nGuadalajara, Jal.", suc3X, sucY + 9, { width: sucColW });
 
-      // -- FILA 2: Datos fiscales + Caja folio --
-      const f2Y = y + 68;
+      // -- FILA 2: Datos fiscales + Caja folio (empieza DESPUÉS de fila 1) --
+      // Logo ~67pt alto (220px wide, ~3.3:1 ratio), sucursales ~60pt → fila 1 termina ~y+70
+      const f2Y = y + 80;
 
       // Emisor (izquierda)
       doc.fontSize(6).fillColor(COLORS.gray).font("Helvetica");
