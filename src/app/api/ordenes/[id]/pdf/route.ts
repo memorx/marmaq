@@ -21,13 +21,13 @@ const COLORS = {
   white: "#FFFFFF",
 };
 
-// Condiciones de garantía (comprobante de recepción)
+// Condiciones formato TORREY
 const PARTES_SIN_GARANTIA =
-  "Las piezas o refacciones que hayan sufrido daños o desgaste producto del uso no están cubiertas por ningún tipo de garantía.";
+  "Motores, compresores, arrancadores, balastras, lámparas (en caso de estar quemados) empaques, cristales y partes de plástico. Estas piezas no se garantizan pues están expuestas a que se les puede dar un mal uso (por descuido u omisión), variaciones de voltaje o por no dar el mantenimiento preventivo de acuerdo con el instructivo o manual de operación";
 const GARANTIA_TRABAJO =
-  "El servicio de reparación incluye 30 días de garantía sobre la mano de obra del mismo.";
+  "GARANTIA POR 30 DIAS SOBRE TRABAJO REALIZADO";
 const AVISO_REMATE =
-  "Los equipos que no sean recogidos en un plazo de 90 días naturales serán considerados como abandonados y puestos en remate.";
+  "DESPUES DE 60 DIAS DE TRABAJO TERMINADO SU EQUIPO SE REMATARA PARA RECUPERAR GASTOS";
 
 // Formato de fecha
 function formatDate(date: Date | string | null): string {
@@ -299,22 +299,32 @@ export async function GET(
       y += 20;
     }
 
-    // ============ CONDICIONES DE GARANTÍA (solo comprobante) ============
+    // ============ CONDICIONES FORMATO TORREY (solo comprobante) ============
     if (isComprobante) {
       y += 5;
-      doc.fontSize(sectionFontSize).fillColor(COLORS.secondary).font("Helvetica-Bold");
-      doc.text("CONDICIONES", marginLeft, y);
-      y += headerGap;
 
+      // Header "Partes sin garantía:"
+      doc.fontSize(10).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text("Partes sin garantía:", marginLeft, y);
+      y += 14;
+
+      // Texto disclaimer
       doc.fontSize(8).fillColor(COLORS.gray).font("Helvetica");
-      doc.text(`• ${PARTES_SIN_GARANTIA}`, marginLeft, y, { width: contentWidth });
-      y += doc.heightOfString(`• ${PARTES_SIN_GARANTIA}`, { width: contentWidth }) + 4;
+      doc.text(PARTES_SIN_GARANTIA, marginLeft, y, { width: contentWidth });
+      y += doc.heightOfString(PARTES_SIN_GARANTIA, { width: contentWidth }) + 10;
 
-      doc.text(`• ${GARANTIA_TRABAJO}`, marginLeft, y, { width: contentWidth });
-      y += doc.heightOfString(`• ${GARANTIA_TRABAJO}`, { width: contentWidth }) + 4;
+      // Franja gris: garantía 30 días
+      const franjaHeight = 20;
+      doc.rect(marginLeft, y, contentWidth, franjaHeight).fillColor(COLORS.lightGray).fill();
+      doc.fontSize(9).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text(GARANTIA_TRABAJO, marginLeft, y + 5, { width: contentWidth, align: "center" });
+      y += franjaHeight + 6;
 
-      doc.text(`• ${AVISO_REMATE}`, marginLeft, y, { width: contentWidth });
-      y += doc.heightOfString(`• ${AVISO_REMATE}`, { width: contentWidth }) + 10;
+      // Franja gris: aviso remate 60 días
+      doc.rect(marginLeft, y, contentWidth, franjaHeight).fillColor(COLORS.lightGray).fill();
+      doc.fontSize(9).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text(AVISO_REMATE, marginLeft, y + 5, { width: contentWidth, align: "center" });
+      y += franjaHeight + 10;
     }
 
     // ============ SECCIONES SOLO PARA REPORTE COMPLETO ============
@@ -413,7 +423,7 @@ export async function GET(
     if (isComprobante) {
       // Comprobante: solo firma del cliente
       doc.fontSize(12).fillColor(COLORS.secondary).font("Helvetica-Bold");
-      doc.text("FIRMA DE RECEPCIÓN", marginLeft, y);
+      doc.text("Firma de Aceptacion", marginLeft, y);
       y += 20;
 
       const firmaWidth = contentWidth / 2;

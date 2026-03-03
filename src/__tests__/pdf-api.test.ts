@@ -416,40 +416,50 @@ describe("GET /api/ordenes/[id]/pdf", () => {
       expect(response.headers.get("Content-Disposition")).toContain("comprobante-OS-2024-0001.pdf");
     });
 
-    it("comprobante incluye sección CONDICIONES", async () => {
+    it("comprobante incluye header 'Partes sin garantía:'", async () => {
       const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
       const params = createParams("orden-123");
 
       await GET(request, { params });
 
-      expect(pdfTextCalls.some((t) => t === "CONDICIONES")).toBe(true);
+      expect(pdfTextCalls.some((t) => t === "Partes sin garantía:")).toBe(true);
     });
 
-    it("comprobante incluye texto de partes sin garantía", async () => {
+    it("comprobante incluye texto disclaimer de partes sin garantía", async () => {
       const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
       const params = createParams("orden-123");
 
       await GET(request, { params });
 
-      expect(pdfTextCalls.some((t) => t.includes("piezas o refacciones"))).toBe(true);
+      expect(pdfTextCalls.some((t) => t.includes("Motores, compresores, arrancadores"))).toBe(true);
     });
 
-    it("comprobante incluye texto de garantía de trabajo", async () => {
+    it("comprobante incluye franja de garantía 30 días", async () => {
       const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
       const params = createParams("orden-123");
 
       await GET(request, { params });
 
-      expect(pdfTextCalls.some((t) => t.includes("30 días de garantía"))).toBe(true);
+      expect(pdfTextCalls.some((t) => t === "GARANTIA POR 30 DIAS SOBRE TRABAJO REALIZADO")).toBe(true);
     });
 
-    it("comprobante incluye texto de aviso de remate", async () => {
+    it("comprobante incluye franja de aviso remate 60 días", async () => {
       const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
       const params = createParams("orden-123");
 
       await GET(request, { params });
 
-      expect(pdfTextCalls.some((t) => t.includes("90 días naturales"))).toBe(true);
+      expect(pdfTextCalls.some((t) => t === "DESPUES DE 60 DIAS DE TRABAJO TERMINADO SU EQUIPO SE REMATARA PARA RECUPERAR GASTOS")).toBe(true);
+    });
+
+    it("comprobante usa 'Firma de Aceptacion' en vez de 'FIRMA DE RECEPCIÓN'", async () => {
+      const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
+      const params = createParams("orden-123");
+
+      await GET(request, { params });
+
+      expect(pdfTextCalls.some((t) => t === "Firma de Aceptacion")).toBe(true);
+      expect(pdfTextCalls.some((t) => t === "FIRMA DE RECEPCIÓN")).toBe(false);
     });
 
     it("comprobante incluye 'Hoja 1 de 1' en pie de página", async () => {
