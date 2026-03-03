@@ -473,46 +473,54 @@ export async function GET(
       }
     }
 
-    // ============ PIE DE PÁGINA ============
+    // ============ PIE DE PÁGINA (FOOTER FIJO AL FONDO) ============
     if (isComprobante) {
-      // Advance past firma content (signature line at y+50, name at y+70, fecha at y+85)
-      y += 100;
+      const pageHeight = 792; // Letter height in points
+      const bottomMargin = 30;
+      const franjaHeight = 20;
 
-      // ============ CONDICIONES FORMATO TORREY ============
-      y += 5;
+      // Pre-calculate disclaimer text height
+      doc.fontSize(8).font("Helvetica");
+      const disclaimerHeight = doc.heightOfString(PARTES_SIN_GARANTIA, { width: contentWidth });
+
+      // Total footer block height (preserves same internal spacing)
+      const footerBlockHeight = 5 + 14 + disclaimerHeight + 10 + franjaHeight + 6 + franjaHeight + 10 + 12 + 10;
+
+      // Position footer so it ends at pageHeight - bottomMargin
+      let fy = pageHeight - bottomMargin - footerBlockHeight;
 
       // Header "Partes sin garantía:"
+      fy += 5;
       doc.fontSize(10).fillColor(COLORS.secondary).font("Helvetica-Bold");
-      doc.text("Partes sin garantía:", marginLeft, y);
-      y += 14;
+      doc.text("Partes sin garantía:", marginLeft, fy);
+      fy += 14;
 
       // Texto disclaimer
       doc.fontSize(8).fillColor(COLORS.gray).font("Helvetica");
-      doc.text(PARTES_SIN_GARANTIA, marginLeft, y, { width: contentWidth });
-      y += doc.heightOfString(PARTES_SIN_GARANTIA, { width: contentWidth }) + 10;
+      doc.text(PARTES_SIN_GARANTIA, marginLeft, fy, { width: contentWidth });
+      fy += disclaimerHeight + 10;
 
       // Franja gris: garantía 30 días
-      const franjaHeight = 20;
-      doc.rect(marginLeft, y, contentWidth, franjaHeight).fillColor(COLORS.lightGray).fill();
+      doc.rect(marginLeft, fy, contentWidth, franjaHeight).fillColor(COLORS.lightGray).fill();
       doc.fontSize(9).fillColor(COLORS.secondary).font("Helvetica-Bold");
-      doc.text(GARANTIA_TRABAJO, marginLeft, y + 5, { width: contentWidth, align: "center" });
-      y += franjaHeight + 6;
+      doc.text(GARANTIA_TRABAJO, marginLeft, fy + 5, { width: contentWidth, align: "center" });
+      fy += franjaHeight + 6;
 
       // Franja gris: aviso remate 60 días
-      doc.rect(marginLeft, y, contentWidth, franjaHeight).fillColor(COLORS.lightGray).fill();
+      doc.rect(marginLeft, fy, contentWidth, franjaHeight).fillColor(COLORS.lightGray).fill();
       doc.fontSize(9).fillColor(COLORS.secondary).font("Helvetica-Bold");
-      doc.text(AVISO_REMATE, marginLeft, y + 5, { width: contentWidth, align: "center" });
-      y += franjaHeight + 10;
+      doc.text(AVISO_REMATE, marginLeft, fy + 5, { width: contentWidth, align: "center" });
+      fy += franjaHeight + 10;
 
       // Footer text
       doc.fontSize(7).fillColor(COLORS.gray).font("Helvetica");
       doc.text(
         `Conserve este comprobante. MARMAQ Servicio Técnico • ${formatDateTime(new Date())}`,
         marginLeft,
-        y,
+        fy,
         { width: contentWidth, align: "center" }
       );
-      doc.text("Hoja 1 de 1", marginLeft, y + 12, { width: contentWidth, align: "center" });
+      doc.text("Hoja 1 de 1", marginLeft, fy + 12, { width: contentWidth, align: "center" });
     } else {
       y = 750;
       doc.fontSize(8).fillColor(COLORS.gray).font("Helvetica");
