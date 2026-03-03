@@ -17,7 +17,6 @@ import {
 import {
   checkRole,
   unauthorizedResponse,
-  canAccessOrden,
   canViewOrden,
   getUserRole,
   canTecnicoUpdateFields,

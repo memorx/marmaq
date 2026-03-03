@@ -21,6 +21,7 @@ model User {
   historialCambios  HistorialEstado[]
   historialOrdenes  HistorialOrden[]
   notificaciones    Notificacion[]
+  conversaciones    ChatConversation[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -400,4 +401,41 @@ enum PrioridadNotif {
   NORMAL
   ALTA
   URGENTE
+}
+
+// ============ CHAT MAQ ============
+enum ChatRole {
+  USER
+  ASSISTANT
+}
+
+model ChatConversation {
+  id          String        @id @default(cuid())
+  usuarioId   String
+  usuario     User          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  titulo      String?
+  activa      Boolean       @default(true)
+
+  mensajes    ChatMessage[]
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([usuarioId, updatedAt])
+  @@index([activa])
+}
+
+model ChatMessage {
+  id              String           @id @default(cuid())
+  conversacionId  String
+  conversacion    ChatConversation @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
+
+  role            ChatRole
+  content         String           @db.Text
+  error           Boolean          @default(false)
+
+  createdAt       DateTime         @default(now())
+
+  @@index([conversacionId, createdAt])
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
-import { CreateOrdenSchema, UpdateOrdenSchema } from "@/lib/validators/ordenes";
+import { CreateOrdenSchema } from "@/lib/validators/ordenes";
 
 // ============ VALIDATOR TESTS ============
 

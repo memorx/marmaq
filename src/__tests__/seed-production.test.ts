@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
@@ -21,19 +21,7 @@ function extractEmails(content: string): string[] {
   return emails;
 }
 
-// Extraer todos los entries con role TECNICO
-function extractTecnicos(content: string): string[] {
-  // Match entries that have role: Role.TECNICO
-  const blockRegex = /\{\s*email:\s*"([^"]+)"[^}]*role:\s*Role\.TECNICO[^}]*\}/g;
-  const tecnicos: string[] = [];
-  let match;
-  while ((match = blockRegex.exec(content)) !== null) {
-    tecnicos.push(match[1]);
-  }
-  return blockRegex.lastIndex; // reset
-}
-
-// Better extraction: parse the USUARIOS array entries
+// Parse the USUARIOS array entries
 function extractUsuarioBlocks(content: string): Array<{ email: string; role: string; name: string }> {
   const blockRegex = /\{\s*email:\s*"([^"]+)",\s*name:\s*"([^"]+)",\s*role:\s*Role\.(\w+)/g;
   const usuarios: Array<{ email: string; role: string; name: string }> = [];

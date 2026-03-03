@@ -14,6 +14,7 @@ import {
   FileBarChart,
   UserCog,
   Settings,
+  MessageSquare,
   LogOut,
   X,
 } from "lucide-react";
@@ -35,6 +36,7 @@ const navItems = [
   { href: "/materiales", icon: Package, label: "Materiales" },
   { href: "/reportes", icon: FileBarChart, label: "Reportes" },
   { href: "/usuarios", icon: UserCog, label: "Usuarios", adminOnly: true },
+  { href: "/admin/chat", icon: MessageSquare, label: "Chat Maq", adminOnly: true },
   { href: "/configuracion", icon: Settings, label: "Configuración", adminOnly: true },
 ];
 
