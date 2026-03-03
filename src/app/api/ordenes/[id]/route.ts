@@ -154,23 +154,31 @@ export async function PATCH(
 
     // SUPER_ADMIN y COORD_SERVICIO pueden actualizar todo
     if (userRole !== "SUPER_ADMIN" && userRole !== "COORD_SERVICIO") {
-      // TECNICO: solo puede actualizar órdenes asignadas a él y campos específicos
+      // TECNICO: puede cambiar estado de cualquier orden, pero solo editar campos de las asignadas
       if (userRole === "TECNICO") {
-        // Verificar que la orden está asignada a este técnico
-        if (ordenActual.tecnicoId !== session.user.id) {
-          return unauthorizedResponse("Solo puedes actualizar órdenes asignadas a ti");
+        // Verificar que el técnico puede ver esta orden
+        if (!canViewOrden(session, ordenActual)) {
+          return unauthorizedResponse("No tienes permisos para esta orden");
         }
 
-        // Verificar que solo actualiza campos permitidos
+        // Separar estado de otros campos
         const updateFields = Object.keys(body).filter(
           (key) => body[key as keyof typeof body] !== undefined
         );
-        const { allowed, forbiddenFields } = canTecnicoUpdateFields(updateFields, ordenActual);
+        const nonEstadoFields = updateFields.filter((f) => f !== "estado");
 
-        if (!allowed) {
-          return unauthorizedResponse(
-            `No tienes permisos para actualizar los campos: ${forbiddenFields.join(", ")}`
-          );
+        // Editar campos (no-estado) requiere que la orden esté asignada al técnico
+        if (nonEstadoFields.length > 0) {
+          if (ordenActual.tecnicoId !== session.user.id) {
+            return unauthorizedResponse("Solo puedes actualizar órdenes asignadas a ti");
+          }
+
+          const { allowed, forbiddenFields } = canTecnicoUpdateFields(nonEstadoFields, ordenActual);
+          if (!allowed) {
+            return unauthorizedResponse(
+              `No tienes permisos para actualizar los campos: ${forbiddenFields.join(", ")}`
+            );
+          }
         }
       }
 

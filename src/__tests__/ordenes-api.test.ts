@@ -594,3 +594,76 @@ describe("RBAC - canViewOrden vs canAccessOrden (GET vs PATCH)", () => {
     expect(canAccessOrden(session, suOrden)).toBe(true);
   });
 });
+
+describe("RBAC - TECNICO cambio de estado vs edición de campos", () => {
+  const createSession = (role: Role, userId = "user-123"): Session => ({
+    user: {
+      id: userId,
+      role,
+      email: "test@test.com",
+      name: "Test User",
+    },
+    expires: new Date(Date.now() + 86400000).toISOString(),
+  });
+
+  it("TECNICO puede cambiar estado de orden NO asignada a él (canViewOrden)", () => {
+    const session = createSession("TECNICO", "tecnico-1");
+    const ordenAjena = { tecnicoId: "tecnico-2", creadoPorId: "admin-1" };
+    // Para cambios de estado, el PATCH usa canViewOrden (permisivo)
+    expect(canViewOrden(session, ordenAjena)).toBe(true);
+    // Pero canAccessOrden bloquearía edición de campos
+    expect(canAccessOrden(session, ordenAjena)).toBe(false);
+  });
+
+  it("TECNICO puede cambiar estado de orden asignada a él", () => {
+    const session = createSession("TECNICO", "tecnico-1");
+    const suOrden = { tecnicoId: "tecnico-1", creadoPorId: "admin-1" };
+    expect(canViewOrden(session, suOrden)).toBe(true);
+  });
+
+  it("TECNICO puede cambiar estado de orden sin técnico asignado", () => {
+    const session = createSession("TECNICO", "tecnico-1");
+    const ordenSinTecnico = { tecnicoId: null, creadoPorId: "admin-1" };
+    // canViewOrden permite a técnicos ver (y cambiar estado de) cualquier orden
+    expect(canViewOrden(session, ordenSinTecnico)).toBe(true);
+    // canAccessOrden no permite editar campos
+    expect(canAccessOrden(session, ordenSinTecnico)).toBe(false);
+  });
+
+  it("TECNICO NO puede editar otros campos de orden ajena", () => {
+    const session = createSession("TECNICO", "tecnico-1");
+    const ordenAjena = { tecnicoId: "tecnico-2", creadoPorId: "admin-1" };
+    // canAccessOrden se usa para campos no-estado — TECNICO no puede
+    expect(canAccessOrden(session, ordenAjena)).toBe(false);
+  });
+
+  it("'estado' se excluye del check canTecnicoUpdateFields en el PATCH", () => {
+    // En el PATCH handler, 'estado' se filtra antes de llamar canTecnicoUpdateFields
+    const allFields = ["estado", "diagnostico"];
+    const nonEstadoFields = allFields.filter((f) => f !== "estado");
+    // Solo 'diagnostico' se verifica — y es un campo permitido
+    const result = canTecnicoUpdateFields(nonEstadoFields, { tipoServicio: "GARANTIA" });
+    expect(result.allowed).toBe(true);
+    expect(result.forbiddenFields).toEqual([]);
+  });
+
+  it("canTecnicoUpdateFields sigue rechazando campos prohibidos (sin estado)", () => {
+    // 'prioridad' y 'tecnicoId' siguen siendo campos prohibidos para técnicos
+    const nonEstadoFields = ["prioridad", "tecnicoId"];
+    const result = canTecnicoUpdateFields(nonEstadoFields, { tipoServicio: "GARANTIA" });
+    expect(result.allowed).toBe(false);
+    expect(result.forbiddenFields).toContain("prioridad");
+    expect(result.forbiddenFields).toContain("tecnicoId");
+  });
+
+  it("TECNICO puede enviar estado + diagnostico en la misma petición para su orden", () => {
+    const session = createSession("TECNICO", "tecnico-1");
+    const suOrden = { tecnicoId: "tecnico-1", creadoPorId: "admin-1" };
+    // Tiene acceso porque es su orden
+    expect(canAccessOrden(session, suOrden)).toBe(true);
+    // diagnostico está permitido
+    const nonEstadoFields = ["diagnostico"];
+    const result = canTecnicoUpdateFields(nonEstadoFields, { tipoServicio: "GARANTIA" });
+    expect(result.allowed).toBe(true);
+  });
+});
