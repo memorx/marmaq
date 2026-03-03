@@ -149,35 +149,35 @@ export async function GET(
     // ============ HEADER ============
     if (isComprobante) {
       // ====== HEADER COMPLETO MARMAQ (formato oficial TORREY) ======
-      const logoPath = path.join(process.cwd(), "public", "images", "logo-marmaq.jpeg");
-      const logoExists = fs.existsSync(logoPath);
-      const comprobanteLogoW = 130;
+      const fullLogoPath = path.join(process.cwd(), "public", "images", "marmaq-logo-full.png");
+      const fullLogoExists = fs.existsSync(fullLogoPath);
+      const comprobanteLogoW = 165; // ~220px
 
       // -- FILA 1: Logo + Sucursales + marmaq.mx --
-      if (logoExists) {
+      if (fullLogoExists) {
         try {
-          doc.image(logoPath, marginLeft, y, { width: comprobanteLogoW });
+          doc.image(fullLogoPath, marginLeft, y, { width: comprobanteLogoW });
         } catch {
           doc.fontSize(20).fillColor(COLORS.secondary).font("Helvetica-Bold");
           doc.text("MARMAQ", marginLeft, y + 10);
+          doc.fontSize(8).fillColor(COLORS.secondary).font("Helvetica-Oblique");
+          doc.text("Mayorista en Refrigeración y Equipos", marginLeft, y + 35);
         }
       } else {
         doc.fontSize(20).fillColor(COLORS.secondary).font("Helvetica-Bold");
         doc.text("MARMAQ", marginLeft, y + 10);
+        doc.fontSize(8).fillColor(COLORS.secondary).font("Helvetica-Oblique");
+        doc.text("Mayorista en Refrigeración y Equipos", marginLeft, y + 35);
       }
-      // Slogan below logo
-      doc.fontSize(8).fillColor(COLORS.secondary).font("Helvetica-Oblique");
-      doc.text("Mayorista en Refrigeración y Equipos", marginLeft, y + 55);
 
       // "marmaq.mx" top right
-      doc.fontSize(11).fillColor(COLORS.secondary).font("Helvetica-Bold");
-      doc.text("marmaq.mx", pageWidth - marginRight - 80, y, { width: 80, align: "right" });
+      doc.fontSize(10).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text("marmaq.mx", pageWidth - marginRight - 70, y, { width: 70, align: "right" });
 
-      // 3 columnas de sucursales
-      const sucStartX = marginLeft + comprobanteLogoW + 10;
-      const sucColW = 100;
-      const sucGap = 5;
-      const sucY = y + 3;
+      // 3 columnas de sucursales (después del logo, x=280)
+      const sucStartX = 280;
+      const sucColW = 95;
+      const sucY = y + 14;
 
       // Columna 1 — Matriz y Refacciones
       doc.fontSize(7).fillColor(COLORS.secondary).font("Helvetica-Bold");
@@ -186,24 +186,24 @@ export async function GET(
       doc.text("Mexicaltzingo No. 1895\nCol. Americana\nTels:3338253296,\n3338255964, 3338267059\nGuadalajara, Jal.", sucStartX, sucY + 9, { width: sucColW });
 
       // Columna 2 — Suc. La Paz
-      const suc2X = sucStartX + sucColW + sucGap;
+      const suc2X = sucStartX + sucColW;
       doc.fontSize(7).fillColor(COLORS.secondary).font("Helvetica-Bold");
       doc.text("Suc. La Paz", suc2X, sucY, { width: sucColW });
       doc.fontSize(6).fillColor(COLORS.gray).font("Helvetica");
       doc.text("Av. La Paz No. 948\nCol. Centro,\nTels:3336582371,\n3336130656,\nGuadalajara, Jal.", suc2X, sucY + 9, { width: sucColW });
 
       // Columna 3 — Suc. Abastos
-      const suc3X = suc2X + sucColW + sucGap;
+      const suc3X = suc2X + sucColW;
       doc.fontSize(7).fillColor(COLORS.secondary).font("Helvetica-Bold");
       doc.text("Suc. Abastos", suc3X, sucY, { width: sucColW });
       doc.fontSize(6).fillColor(COLORS.gray).font("Helvetica");
       doc.text("Av. Lázaro Cárdenas No. 2470\nLocal 4,5 y 6\nCol. Jardines de la Victoria,\nTels:3338100001, 3338100028\nGuadalajara, Jal.", suc3X, sucY + 9, { width: sucColW });
 
       // -- FILA 2: Datos fiscales + Caja folio --
-      const f2Y = y + 70;
+      const f2Y = y + 68;
 
       // Emisor (izquierda)
-      doc.fontSize(7).fillColor(COLORS.gray).font("Helvetica");
+      doc.fontSize(6).fillColor(COLORS.gray).font("Helvetica");
       doc.text("Emisor:", marginLeft, f2Y);
       doc.fontSize(8).fillColor(COLORS.secondary).font("Helvetica-Bold");
       doc.text("MAYOREO DE REFRIGERACION Y MAQUINAS, S.A. DE C.V.", marginLeft, f2Y + 10);
@@ -230,7 +230,7 @@ export async function GET(
 
       // Línea separadora
       y = boxY + boxH + 8;
-      doc.moveTo(marginLeft, y).lineTo(pageWidth - marginRight, y).strokeColor(COLORS.lightGray).lineWidth(1).stroke();
+      doc.moveTo(marginLeft, y).lineTo(pageWidth - marginRight, y).strokeColor("#CCCCCC").lineWidth(0.5).stroke();
       y += 10;
     } else {
       // ====== HEADER REPORTE COMPLETO (original, sin cambios) ======
