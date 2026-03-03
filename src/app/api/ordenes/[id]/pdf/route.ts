@@ -299,34 +299,6 @@ export async function GET(
       y += 20;
     }
 
-    // ============ CONDICIONES FORMATO TORREY (solo comprobante) ============
-    if (isComprobante) {
-      y += 5;
-
-      // Header "Partes sin garantía:"
-      doc.fontSize(10).fillColor(COLORS.secondary).font("Helvetica-Bold");
-      doc.text("Partes sin garantía:", marginLeft, y);
-      y += 14;
-
-      // Texto disclaimer
-      doc.fontSize(8).fillColor(COLORS.gray).font("Helvetica");
-      doc.text(PARTES_SIN_GARANTIA, marginLeft, y, { width: contentWidth });
-      y += doc.heightOfString(PARTES_SIN_GARANTIA, { width: contentWidth }) + 10;
-
-      // Franja gris: garantía 30 días
-      const franjaHeight = 20;
-      doc.rect(marginLeft, y, contentWidth, franjaHeight).fillColor(COLORS.lightGray).fill();
-      doc.fontSize(9).fillColor(COLORS.secondary).font("Helvetica-Bold");
-      doc.text(GARANTIA_TRABAJO, marginLeft, y + 5, { width: contentWidth, align: "center" });
-      y += franjaHeight + 6;
-
-      // Franja gris: aviso remate 60 días
-      doc.rect(marginLeft, y, contentWidth, franjaHeight).fillColor(COLORS.lightGray).fill();
-      doc.fontSize(9).fillColor(COLORS.secondary).font("Helvetica-Bold");
-      doc.text(AVISO_REMATE, marginLeft, y + 5, { width: contentWidth, align: "center" });
-      y += franjaHeight + 10;
-    }
-
     // ============ SECCIONES SOLO PARA REPORTE COMPLETO ============
     if (!isComprobante) {
       // DIAGNÓSTICO Y SOLUCIÓN
@@ -503,15 +475,44 @@ export async function GET(
 
     // ============ PIE DE PÁGINA ============
     if (isComprobante) {
-      const footerY = y + 100;
+      // Advance past firma content (signature line at y+50, name at y+70, fecha at y+85)
+      y += 100;
+
+      // ============ CONDICIONES FORMATO TORREY ============
+      y += 5;
+
+      // Header "Partes sin garantía:"
+      doc.fontSize(10).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text("Partes sin garantía:", marginLeft, y);
+      y += 14;
+
+      // Texto disclaimer
+      doc.fontSize(8).fillColor(COLORS.gray).font("Helvetica");
+      doc.text(PARTES_SIN_GARANTIA, marginLeft, y, { width: contentWidth });
+      y += doc.heightOfString(PARTES_SIN_GARANTIA, { width: contentWidth }) + 10;
+
+      // Franja gris: garantía 30 días
+      const franjaHeight = 20;
+      doc.rect(marginLeft, y, contentWidth, franjaHeight).fillColor(COLORS.lightGray).fill();
+      doc.fontSize(9).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text(GARANTIA_TRABAJO, marginLeft, y + 5, { width: contentWidth, align: "center" });
+      y += franjaHeight + 6;
+
+      // Franja gris: aviso remate 60 días
+      doc.rect(marginLeft, y, contentWidth, franjaHeight).fillColor(COLORS.lightGray).fill();
+      doc.fontSize(9).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text(AVISO_REMATE, marginLeft, y + 5, { width: contentWidth, align: "center" });
+      y += franjaHeight + 10;
+
+      // Footer text
       doc.fontSize(7).fillColor(COLORS.gray).font("Helvetica");
       doc.text(
         `Conserve este comprobante. MARMAQ Servicio Técnico • ${formatDateTime(new Date())}`,
         marginLeft,
-        footerY,
+        y,
         { width: contentWidth, align: "center" }
       );
-      doc.text("Hoja 1 de 1", marginLeft, footerY + 12, { width: contentWidth, align: "center" });
+      doc.text("Hoja 1 de 1", marginLeft, y + 12, { width: contentWidth, align: "center" });
     } else {
       y = 750;
       doc.fontSize(8).fillColor(COLORS.gray).font("Helvetica");
