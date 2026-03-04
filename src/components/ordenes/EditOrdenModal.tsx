@@ -18,12 +18,14 @@ import type {
   EstadoOrden,
   Prioridad,
   CondicionEquipo,
+  Sucursal,
   UpdateOrdenInput,
 } from "@/types/ordenes";
 import {
   STATUS_LABELS,
   PRIORIDAD_LABELS,
   CONDICION_LABELS,
+  SUCURSAL_LABELS,
 } from "@/types/ordenes";
 
 interface Tecnico {
@@ -62,9 +64,10 @@ export function EditOrdenModal({ orden, isOpen, onClose, onSave }: EditOrdenModa
   const [loadingTecnicos, setLoadingTecnicos] = useState(true);
 
   // Form state
-  const [formData, setFormData] = useState<UpdateOrdenInput>({
+  const [formData, setFormData] = useState<UpdateOrdenInput & { sucursal?: Sucursal }>({
     estado: orden.estado,
     prioridad: orden.prioridad,
+    sucursal: orden.sucursal,
     tecnicoId: orden.tecnicoId || undefined,
     marcaEquipo: orden.marcaEquipo,
     modeloEquipo: orden.modeloEquipo,
@@ -109,6 +112,7 @@ export function EditOrdenModal({ orden, isOpen, onClose, onSave }: EditOrdenModa
       setFormData({
         estado: orden.estado,
         prioridad: orden.prioridad,
+        sucursal: orden.sucursal,
         tecnicoId: orden.tecnicoId || undefined,
         marcaEquipo: orden.marcaEquipo,
         modeloEquipo: orden.modeloEquipo,
@@ -144,6 +148,9 @@ export function EditOrdenModal({ orden, isOpen, onClose, onSave }: EditOrdenModa
       }
       if (formData.prioridad !== orden.prioridad) {
         updatePayload.prioridad = formData.prioridad;
+      }
+      if (formData.sucursal !== orden.sucursal) {
+        (updatePayload as UpdateOrdenInput & { sucursal?: Sucursal }).sucursal = formData.sucursal;
       }
       if (formData.tecnicoId !== orden.tecnicoId) {
         updatePayload.tecnicoId = formData.tecnicoId || null;
@@ -343,6 +350,23 @@ export function EditOrdenModal({ orden, isOpen, onClose, onSave }: EditOrdenModa
                       <option key={p} value={p}>
                         {PRIORIDAD_LABELS[p]}
                       </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sucursal
+                  </label>
+                  <select
+                    value={formData.sucursal}
+                    onChange={(e) => setFormData({ ...formData, sucursal: e.target.value as Sucursal })}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
+                  >
+                    {(["MEXICALTZINGO", "LA_PAZ", "ABASTOS"] as Sucursal[]).map((s) => (
+                      <option key={s} value={s}>{SUCURSAL_LABELS[s]}</option>
                     ))}
                   </select>
                 </div>

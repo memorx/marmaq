@@ -4,6 +4,7 @@ import type {
   Prioridad,
   CondicionEquipo,
   TipoEvidencia,
+  Sucursal,
 } from "@prisma/client";
 
 // ============ LABELS PARA UI ============
@@ -48,4 +49,16 @@ export const TIPO_EVIDENCIA_LABELS: Record<TipoEvidencia, string> = {
   ENTREGA: "Entrega",
   FACTURA: "Factura",
   OTRO: "Otro",
+};
+
+export const SUCURSAL_LABELS: Record<Sucursal, string> = {
+  MEXICALTZINGO: "Mexicaltzingo (Matriz)",
+  LA_PAZ: "La Paz",
+  ABASTOS: "Abastos",
+};
+
+export const SUCURSAL_SHORT_LABELS: Record<Sucursal, string> = {
+  MEXICALTZINGO: "MEX",
+  LA_PAZ: "PAZ",
+  ABASTOS: "ABA",
 };

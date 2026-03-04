@@ -2,7 +2,8 @@
 
 import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
-import { Button } from "@/components/ui";
+import { Button, ImageLightbox } from "@/components/ui";
+import type { LightboxImage } from "@/components/ui";
 import {
   Upload,
   Camera,
@@ -12,8 +13,25 @@ import {
   AlertCircle,
   Loader2,
   ImagePlus,
+  Play,
 } from "lucide-react";
 import type { TipoEvidencia, Evidencia } from "@prisma/client";
+
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
+const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+
+function isVideoFile(file: File): boolean {
+  return ALLOWED_VIDEO_TYPES.includes(file.type);
+}
+
+function isVideoUrl(evidencia: Evidencia): boolean {
+  if ((evidencia as Evidencia & { esVideo?: boolean }).esVideo) return true;
+  const ext = (evidencia.filename || evidencia.url).toLowerCase();
+  return ext.endsWith(".mp4") || ext.endsWith(".mov") || ext.endsWith(".webm");
+}
 
 interface EvidenciaUploadProps {
   ordenId?: string; // Si no hay ordenId, guarda los archivos localmente para subir después
@@ -56,6 +74,16 @@ export function EvidenciaUpload({
   const [dragActive, setDragActive] = useState(false);
   const [evidencias, setEvidencias] = useState<Evidencia[]>(evidenciasExistentes);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToastMsg(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToastMsg(null), 4000);
+  }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -68,20 +96,23 @@ export function EvidenciaUpload({
     const remainingSlots = maxFiles - currentCount;
 
     if (remainingSlots <= 0) {
-      alert(`Máximo ${maxFiles} fotos permitidas`);
+      showToast(`Máximo ${maxFiles} archivos permitidos`);
       return;
     }
 
     const newFiles = Array.from(files).slice(0, remainingSlots);
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/heic"];
 
     const validFiles = newFiles.filter((file) => {
-      if (!allowedTypes.includes(file.type)) {
-        alert(`Tipo de archivo no permitido: ${file.name}`);
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        showToast(`Formato no soportado: ${file.name}. Permitidos: JPG, PNG, WEBP, MP4, MOV`);
         return false;
       }
-      if (file.size > 10 * 1024 * 1024) {
-        alert(`Archivo muy grande: ${file.name}. Máximo 10MB`);
+      const isVid = isVideoFile(file);
+      const maxSize = isVid ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+      if (file.size > maxSize) {
+        showToast(isVid
+          ? `El video es muy grande: ${file.name}. Máximo permitido: 50MB`
+          : `Archivo muy grande: ${file.name}. Máximo 10MB`);
         return false;
       }
       return true;
@@ -100,7 +131,7 @@ export function EvidenciaUpload({
       const allFiles = [...previews.map((p) => p.file), ...validFiles];
       onFilesChange(allFiles);
     }
-  }, [previews, evidencias.length, maxFiles, ordenId, onFilesChange]);
+  }, [previews, evidencias.length, maxFiles, ordenId, onFilesChange, showToast]);
 
   // Drag & Drop handlers
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -223,7 +254,7 @@ export function EvidenciaUpload({
       setEvidencias((prev) => prev.filter((e) => e.id !== evidenciaId));
     } catch (error) {
       console.error("Error deleting:", error);
-      alert("Error al eliminar la evidencia");
+      showToast("Error al eliminar la evidencia");
     } finally {
       setDeletingId(null);
     }
@@ -232,6 +263,19 @@ export function EvidenciaUpload({
   const totalFiles = previews.length + evidencias.length;
   const canAddMore = totalFiles < maxFiles;
 
+  // Build lightbox images from existing evidencias
+  const lightboxImages: LightboxImage[] = evidencias.map((e) => ({
+    url: e.url,
+    tipo: TIPO_LABELS[e.tipo],
+    filename: e.filename || undefined,
+    isVideo: isVideoUrl(e),
+  }));
+
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -239,7 +283,7 @@ export function EvidenciaUpload({
         <div className="flex items-center gap-2 min-w-0">
           <Camera className="w-5 h-5 text-gray-500 flex-shrink-0" />
           <h3 className="font-medium text-gray-900 text-sm lg:text-base truncate">
-            Fotos de {TIPO_LABELS[tipo]}
+            Evidencias de {TIPO_LABELS[tipo]}
           </h3>
           <span className="text-xs lg:text-sm text-gray-500 flex-shrink-0">
             ({totalFiles}/{maxFiles})
@@ -266,7 +310,7 @@ export function EvidenciaUpload({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic"
+            accept="image/jpeg,image/png,image/webp,image/heic,video/mp4,video/quicktime,video/webm"
             multiple
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
@@ -274,7 +318,7 @@ export function EvidenciaUpload({
           <input
             ref={cameraInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             capture="environment"
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
@@ -315,7 +359,7 @@ export function EvidenciaUpload({
           onClick={() => fileInputRef.current?.click()}
         >
           <p className="text-sm text-gray-500">
-            También puedes arrastrar fotos aquí
+            También puedes arrastrar fotos o videos aquí
           </p>
         </div>
       )}
@@ -396,18 +440,49 @@ export function EvidenciaUpload({
       {/* Grid de evidencias existentes */}
       {evidencias.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 lg:gap-3">
-          {evidencias.map((evidencia) => (
+          {evidencias.map((evidencia, index) => (
             <div
               key={evidencia.id}
-              className="relative aspect-square rounded-lg overflow-hidden bg-gray-100"
+              className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer"
+              onClick={() => openLightbox(index)}
+              role="button"
+              tabIndex={0}
+              aria-label={`Ver foto ${index + 1}`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  openLightbox(index);
+                }
+              }}
             >
-              <Image
-                src={evidencia.url}
-                alt={evidencia.descripcion || evidencia.tipo}
-                fill
-                className="object-cover"
-                unoptimized
-              />
+              {isVideoUrl(evidencia) ? (
+                <>
+                  <video
+                    src={evidencia.url}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    preload="metadata"
+                    muted
+                  />
+                  {/* Play icon overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <div className="w-10 h-10 rounded-full bg-white/80 flex items-center justify-center">
+                      <Play className="w-5 h-5 text-gray-800 ml-0.5" />
+                    </div>
+                  </div>
+                  {/* VIDEO badge */}
+                  <span className="absolute top-1 left-1 bg-purple-600 text-white text-[9px] lg:text-[10px] font-bold px-1.5 py-0.5 rounded">
+                    VIDEO
+                  </span>
+                </>
+              ) : (
+                <Image
+                  src={evidencia.url}
+                  alt={evidencia.descripcion || evidencia.tipo}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              )}
 
               {/* Label del tipo */}
               <span className="absolute bottom-1 left-1 right-1 text-[10px] lg:text-xs bg-black/60 text-white px-1 lg:px-1.5 py-0.5 rounded text-center truncate">
@@ -417,7 +492,10 @@ export function EvidenciaUpload({
               {/* Botón eliminar - siempre visible en móvil */}
               {ordenId && !disabled && (
                 <button
-                  onClick={() => deleteEvidencia(evidencia.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteEvidencia(evidencia.id);
+                  }}
                   disabled={deletingId === evidencia.id}
                   className="absolute top-1 right-1 p-1.5 bg-red-500/90 rounded-full text-white shadow-lg active:scale-90 transition-transform disabled:opacity-50"
                 >
@@ -440,6 +518,25 @@ export function EvidenciaUpload({
           <p>Sin evidencias fotográficas</p>
         </div>
       )}
+
+      {/* Toast notification */}
+      {toastMsg && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span className="flex-1">{toastMsg}</span>
+          <button onClick={() => setToastMsg(null)} className="p-0.5 hover:bg-red-100 rounded">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Lightbox */}
+      <ImageLightbox
+        images={lightboxImages}
+        initialIndex={lightboxIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
     </div>
   );
 }

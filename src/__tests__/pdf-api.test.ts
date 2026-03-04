@@ -97,6 +97,7 @@ const mockOrden = {
   fechaRecepcion: new Date("2024-01-15"),
   tipoServicio: "POR_COBRAR",
   estado: "REPARADO",
+  sucursal: "LA_PAZ",
   marcaEquipo: "TORREY",
   modeloEquipo: "L-EQ 10",
   serieEquipo: "ABC123",
@@ -469,6 +470,69 @@ describe("GET /api/ordenes/[id]/pdf", () => {
       await GET(request, { params });
 
       expect(pdfTextCalls.some((t) => t === "Hoja 1 de 1")).toBe(true);
+    });
+
+    it("comprobante incluye teléfono del cliente", async () => {
+      const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
+      const params = createParams("orden-123");
+
+      await GET(request, { params });
+
+      expect(pdfTextCalls.some((t) => t === "Teléfono:")).toBe(true);
+      expect(pdfTextCalls.some((t) => t === "3311234567")).toBe(true);
+    });
+
+    it("comprobante muestra '-' cuando cliente no tiene teléfono", async () => {
+      mockPrisma.orden.findUnique.mockResolvedValue({
+        ...mockOrden,
+        cliente: { ...mockOrden.cliente, telefono: null },
+      });
+
+      const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
+      const params = createParams("orden-123");
+
+      await GET(request, { params });
+
+      expect(pdfTextCalls.some((t) => t === "Teléfono:")).toBe(true);
+      // Find the text call right after "Teléfono:" — it should be "-"
+      const telIdx = pdfTextCalls.indexOf("Teléfono:");
+      expect(telIdx).toBeGreaterThan(-1);
+      expect(pdfTextCalls[telIdx + 1]).toBe("-");
+    });
+
+    it("comprobante incluye nombre del técnico asignado", async () => {
+      const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
+      const params = createParams("orden-123");
+
+      await GET(request, { params });
+
+      expect(pdfTextCalls.some((t) => t === "Técnico:")).toBe(true);
+      expect(pdfTextCalls.some((t) => t === "Carlos Técnico")).toBe(true);
+    });
+
+    it("comprobante muestra 'Sin asignar' cuando no hay técnico", async () => {
+      mockPrisma.orden.findUnique.mockResolvedValue({
+        ...mockOrden,
+        tecnico: null,
+      });
+
+      const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
+      const params = createParams("orden-123");
+
+      await GET(request, { params });
+
+      expect(pdfTextCalls.some((t) => t === "Técnico:")).toBe(true);
+      expect(pdfTextCalls.some((t) => t === "Sin asignar")).toBe(true);
+    });
+
+    it("comprobante incluye texto de sucursal", async () => {
+      const request = createRequest("/api/ordenes/orden-123/pdf?tipo=comprobante");
+      const params = createParams("orden-123");
+
+      await GET(request, { params });
+
+      expect(pdfTextCalls.some((t) => t === "Sucursal:")).toBe(true);
+      expect(pdfTextCalls.some((t) => t === "La Paz")).toBe(true);
     });
 
     it("reporte completo NO incluye condiciones de garantía", async () => {

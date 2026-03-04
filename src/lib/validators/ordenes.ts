@@ -13,6 +13,8 @@ const PrioridadEnum = z.enum(["BAJA", "NORMAL", "ALTA", "URGENTE"]);
 
 const CondicionEquipoEnum = z.enum(["BUENA", "REGULAR", "MALA"]);
 
+const SucursalEnum = z.enum(["MEXICALTZINGO", "LA_PAZ", "ABASTOS"]);
+
 const EstadoOrdenEnum = z.enum([
   "RECIBIDO",
   "EN_DIAGNOSTICO",
@@ -91,6 +93,9 @@ export const CreateOrdenSchema = z
     // Asignación
     prioridad: PrioridadEnum.optional(),
     tecnicoId: z.string().min(1, "ID de técnico inválido").optional(),
+
+    // Sucursal
+    sucursal: SucursalEnum.default("MEXICALTZINGO"),
   })
   .refine((data) => data.clienteId || data.clienteNuevo, {
     message: "Debe especificar un cliente existente o crear uno nuevo",
@@ -139,6 +144,9 @@ export const UpdateOrdenSchema = z
     // REPARE
     numeroRepare: z.string().max(100, "El número REPARE no puede exceder 100 caracteres").optional(),
     coordenadasGPS: z.string().max(100, "Las coordenadas no pueden exceder 100 caracteres").optional(),
+
+    // Sucursal
+    sucursal: SucursalEnum.optional(),
   })
   .refine(
     (data) => Object.keys(data).some((key) => data[key as keyof typeof data] !== undefined),

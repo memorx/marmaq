@@ -71,7 +71,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (filters.tecnicoId) {
-      where.tecnicoId = filters.tecnicoId;
+      if (filters.tecnicoId === "SIN_ASIGNAR") {
+        where.tecnicoId = null;
+      } else {
+        where.tecnicoId = filters.tecnicoId;
+      }
     }
 
     if (filters.clienteId) {
@@ -254,6 +258,8 @@ export async function POST(request: NextRequest) {
           coordenadasGPS: body.coordenadasGPS,
           // Anticipo
           anticipo: body.anticipo,
+          // Sucursal
+          sucursal: body.sucursal,
           // Fechas
           fechaPromesa: body.fechaPromesa ? new Date(body.fechaPromesa) : null,
         },

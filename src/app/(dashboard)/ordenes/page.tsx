@@ -8,11 +8,13 @@ import {
   SEMAFORO_CONFIG,
   STATUS_LABELS,
   SERVICE_TYPE_LABELS,
+  SUCURSAL_SHORT_LABELS,
   type OrdenListItem,
   type OrdenesListResponse,
   type SemaforoColor,
   type TipoServicio,
   type EstadoOrden,
+  type Sucursal,
 } from "@/types/ordenes";
 import { Plus, Search, Eye, ChevronLeft, ChevronRight, Filter, X, Users } from "lucide-react";
 
@@ -100,12 +102,30 @@ export default function OrdenesPage() {
   const [tipoServicio, setTipoServicio] = useState<TipoServicio | "">("");
   const [estado, setEstado] = useState<EstadoOrden | "">("");
   const [semaforo, setSemaforo] = useState<SemaforoColor | "">("");
+  const [tecnicoId, setTecnicoId] = useState("");
+  const [tecnicos, setTecnicos] = useState<{ id: string; name: string }[]>([]);
 
   // Paginación
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const pageSize = 20;
+
+  // Fetch tecnicos for filter dropdown
+  useEffect(() => {
+    async function fetchTecnicos() {
+      try {
+        const res = await fetch("/api/usuarios?role=TECNICO&activos=true");
+        if (res.ok) {
+          const data = await res.json();
+          setTecnicos(data.usuarios || []);
+        }
+      } catch {
+        // Silently fail — filter just won't show technicians
+      }
+    }
+    fetchTecnicos();
+  }, []);
 
   const fetchOrdenes = useCallback(async () => {
     setLoading(true);
@@ -121,6 +141,7 @@ export default function OrdenesPage() {
       if (estado) params.set("estado", estado);
       if (semaforo) params.set("semaforo", semaforo);
       if (clienteId) params.set("clienteId", clienteId);
+      if (tecnicoId) params.set("tecnicoId", tecnicoId);
 
       const response = await fetch(`/api/ordenes?${params.toString()}`);
 
@@ -137,7 +158,7 @@ export default function OrdenesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, tipoServicio, estado, semaforo, clienteId]);
+  }, [page, search, tipoServicio, estado, semaforo, clienteId, tecnicoId]);
 
   useEffect(() => {
     fetchOrdenes();
@@ -191,7 +212,7 @@ export default function OrdenesPage() {
           </div>
 
           {/* Fila de selects en móvil */}
-          <div className="flex gap-2 lg:gap-4">
+          <div className="flex gap-2 lg:gap-4 flex-wrap">
             {/* Tipo de Servicio */}
             <select
               value={tipoServicio}
@@ -199,7 +220,7 @@ export default function OrdenesPage() {
                 setTipoServicio(e.target.value as TipoServicio | "");
                 setPage(1);
               }}
-              className="flex-1 lg:flex-none px-3 lg:px-4 py-3 lg:py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
+              className="flex-1 min-w-[130px] lg:flex-none px-3 lg:px-4 py-3 lg:py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
             >
               {TIPO_SERVICIO_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -215,11 +236,29 @@ export default function OrdenesPage() {
                 setEstado(e.target.value as EstadoOrden | "");
                 setPage(1);
               }}
-              className="flex-1 lg:flex-none px-3 lg:px-4 py-3 lg:py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
+              className="flex-1 min-w-[130px] lg:flex-none px-3 lg:px-4 py-3 lg:py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
             >
               {ESTADO_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Técnico */}
+            <select
+              value={tecnicoId}
+              onChange={(e) => {
+                setTecnicoId(e.target.value);
+                setPage(1);
+              }}
+              className="flex-1 min-w-[130px] lg:flex-none px-3 lg:px-4 py-3 lg:py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
+            >
+              <option value="">Todos los técnicos</option>
+              <option value="SIN_ASIGNAR">Sin asignar</option>
+              {tecnicos.map((tec) => (
+                <option key={tec.id} value={tec.id}>
+                  {tec.name}
                 </option>
               ))}
             </select>
@@ -297,7 +336,7 @@ export default function OrdenesPage() {
         ) : ordenes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-500">
             <p>No se encontraron órdenes</p>
-            {(search || tipoServicio || estado || semaforo) && (
+            {(search || tipoServicio || estado || semaforo || tecnicoId) && (
               <Button
                 variant="ghost"
                 onClick={() => {
@@ -305,6 +344,7 @@ export default function OrdenesPage() {
                   setTipoServicio("");
                   setEstado("");
                   setSemaforo("");
+                  setTecnicoId("");
                 }}
                 className="mt-2"
               >
@@ -336,6 +376,9 @@ export default function OrdenesPage() {
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Tipo
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Suc.
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Técnico
@@ -398,6 +441,11 @@ export default function OrdenesPage() {
                         </Badge>
                       </td>
                       <td className="px-4 py-4">
+                        <span className="text-xs text-gray-500 font-medium">
+                          {SUCURSAL_SHORT_LABELS[orden.sucursal as Sucursal] || "MEX"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
                         {orden.tecnico ? (
                           <span className="text-gray-900">{orden.tecnico.name}</span>
                         ) : (
@@ -446,9 +494,14 @@ export default function OrdenesPage() {
                         {new Date(orden.fechaRecepcion).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}
                       </span>
                     </div>
-                    <Badge variant={getBadgeVariant(orden.tipoServicio)} className="text-xs">
-                      {SERVICE_TYPE_LABELS[orden.tipoServicio]}
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-gray-400 font-medium">
+                        {SUCURSAL_SHORT_LABELS[orden.sucursal as Sucursal] || "MEX"}
+                      </span>
+                      <Badge variant={getBadgeVariant(orden.tipoServicio)} className="text-xs">
+                        {SERVICE_TYPE_LABELS[orden.tipoServicio]}
+                      </Badge>
+                    </div>
                   </div>
 
                   {/* Cliente */}

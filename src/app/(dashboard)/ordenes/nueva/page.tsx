@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { Button, Input, Card } from "@/components/ui";
 import { EvidenciaUpload } from "@/components/ordenes";
 import { MARMAQ_COLORS } from "@/lib/constants/colors";
-import type { TipoServicio, Prioridad, CondicionEquipo, CreateOrdenInput } from "@/types/ordenes";
+import type { TipoServicio, Prioridad, CondicionEquipo, Sucursal, CreateOrdenInput } from "@/types/ordenes";
+import { SUCURSAL_LABELS } from "@/types/ordenes";
 import {
   Shield,
   Building2,
@@ -134,6 +135,9 @@ export default function NuevaOrdenPage() {
   const [fallaReportada, setFallaReportada] = useState("");
   const [condicionEquipo, setCondicionEquipo] = useState<CondicionEquipo>("REGULAR");
 
+  // Sucursal
+  const [sucursal, setSucursal] = useState<Sucursal>("MEXICALTZINGO");
+
   // Cliente
   const [busquedaCliente, setBusquedaCliente] = useState("");
   const [clientesEncontrados, setClientesEncontrados] = useState<ClienteBusqueda[]>([]);
@@ -256,6 +260,7 @@ export default function NuevaOrdenPage() {
       const payload: CreateOrdenInput = {
         tipoServicio,
         prioridad,
+        sucursal,
         marcaEquipo: marca,
         modeloEquipo: modelo,
         serieEquipo: serie || undefined,
@@ -436,7 +441,26 @@ export default function NuevaOrdenPage() {
             )}
           </Card>
 
-          {/* 2. Información del Equipo */}
+          {/* 2. Sucursal */}
+          <Card className="p-4 lg:p-6">
+            <h2 className="text-base lg:text-lg font-semibold text-[#092139] mb-3">Sucursal</h2>
+            <div className="flex gap-4 flex-wrap">
+              {(["MEXICALTZINGO", "LA_PAZ", "ABASTOS"] as Sucursal[]).map((suc) => (
+                <label key={suc} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="sucursal"
+                    checked={sucursal === suc}
+                    onChange={() => setSucursal(suc)}
+                    className="w-4 h-4 text-[#31A7D4] focus:ring-[#31A7D4]"
+                  />
+                  <span className="text-gray-700">{SUCURSAL_LABELS[suc]}</span>
+                </label>
+              ))}
+            </div>
+          </Card>
+
+          {/* 3. Información del Equipo */}
           <Card className="p-6">
             <h2 className="text-lg font-semibold text-[#092139] mb-4">Información del Equipo</h2>
             <div className="space-y-4">

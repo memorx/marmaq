@@ -10,6 +10,7 @@ import type {
   EstadoOrden,
   Prioridad,
   CondicionEquipo,
+  Sucursal,
 } from "@prisma/client";
 
 // ============ CONFIGURACIÓN DEL SEMÁFORO ============
@@ -51,6 +52,8 @@ export {
   PRIORIDAD_LABELS,
   CONDICION_LABELS,
   TIPO_EVIDENCIA_LABELS,
+  SUCURSAL_LABELS,
+  SUCURSAL_SHORT_LABELS,
 } from "@/lib/constants/labels";
 
 // ============ TIPOS DE ORDEN CON RELACIONES ============
@@ -162,4 +165,5 @@ export type {
   EstadoOrden,
   Prioridad,
   CondicionEquipo,
+  Sucursal,
 };

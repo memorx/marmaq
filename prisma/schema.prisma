@@ -66,6 +66,7 @@ model Orden {
   tipoServicio    TipoServicio
   estado          EstadoOrden   @default(RECIBIDO)
   prioridad       Prioridad     @default(NORMAL)
+  sucursal        Sucursal      @default(MEXICALTZINGO)
 
   // Relaciones principales
   clienteId       String
@@ -164,6 +165,12 @@ enum CondicionEquipo {
   MALA
 }
 
+enum Sucursal {
+  MEXICALTZINGO
+  LA_PAZ
+  ABASTOS
+}
+
 // ============ EVIDENCIAS FOTOGRÁFICAS ============
 model Evidencia {
   id          String          @id @default(cuid())
@@ -174,6 +181,7 @@ model Evidencia {
   url         String          // URL de Supabase Storage
   filename    String
   descripcion String?
+  esVideo     Boolean         @default(false)
 
   createdAt   DateTime        @default(now())
 

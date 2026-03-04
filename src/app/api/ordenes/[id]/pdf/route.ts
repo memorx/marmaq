@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import PDFDocument from "pdfkit";
 import { auth } from "@/lib/auth/auth";
 import prisma from "@/lib/db/prisma";
-import { STATUS_LABELS, SERVICE_TYPE_LABELS } from "@/types/ordenes";
+import { STATUS_LABELS, SERVICE_TYPE_LABELS, SUCURSAL_LABELS } from "@/types/ordenes";
 import { canViewOrden, unauthorizedResponse } from "@/lib/auth/authorize";
 import * as fs from "fs";
 import * as path from "path";
@@ -299,14 +299,15 @@ export async function GET(
     const clienteData: [string, string][] = [
       ["Nombre:", String(orden.cliente.nombre || "-")],
       ["Empresa:", String(orden.cliente.empresa || "-")],
+      ["Teléfono:", String(orden.cliente.telefono || "-")],
     ];
-    // Comprobante no incluye teléfono/email del cliente
+    // Comprobante no incluye email del cliente
     if (!isComprobante) {
       clienteData.push(
-        ["Teléfono:", String(orden.cliente.telefono || "-")],
         ["Email:", String(orden.cliente.email || "-")],
       );
     }
+    clienteData.push(["Sucursal:", SUCURSAL_LABELS[orden.sucursal] || "Mexicaltzingo (Matriz)"]);
 
     doc.fontSize(bodyFontSize).font("Helvetica");
     for (const [label, value] of clienteData) {
@@ -353,6 +354,15 @@ export async function GET(
       doc.text(`  •  Estado: ${STATUS_LABELS[orden.estado]}`, marginLeft + 100, y);
     }
     y += isComprobante ? 15 : 20;
+
+    // Técnico asignado (solo comprobante)
+    if (isComprobante) {
+      doc.fontSize(bodyFontSize).fillColor(COLORS.gray).font("Helvetica");
+      doc.text("Técnico:", marginLeft, y, { width: 80 });
+      doc.fontSize(bodyFontSize).fillColor(COLORS.secondary).font("Helvetica-Bold");
+      doc.text(orden.tecnico?.name || "Sin asignar", marginLeft + 80, y);
+      y += rowHeight;
+    }
 
     // Datos de garantía si aplica
     if (orden.tipoServicio === "GARANTIA" && orden.numeroFactura) {

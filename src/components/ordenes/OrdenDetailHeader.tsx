@@ -14,8 +14,10 @@ import {
   SEMAFORO_CONFIG,
   STATUS_LABELS,
   SERVICE_TYPE_LABELS,
+  SUCURSAL_LABELS,
   type OrdenConRelaciones,
   type SemaforoColor,
+  type Sucursal,
 } from "@/types/ordenes";
 import { getBadgeVariant, getStatusBadgeVariant } from "@/lib/constants/orden-detail";
 
@@ -27,6 +29,15 @@ interface OrdenDetailHeaderProps {
   onEditModal: () => void;
   onGeneratePdf: (tipo: "comprobante" | "completo") => void;
   generatingPdf: boolean;
+}
+
+function getSucursalBadgeVariant(sucursal: Sucursal): "info" | "success" | "warning" {
+  const map: Record<Sucursal, "info" | "success" | "warning"> = {
+    MEXICALTZINGO: "info",
+    LA_PAZ: "success",
+    ABASTOS: "warning",
+  };
+  return map[sucursal];
 }
 
 export function OrdenDetailHeader({
@@ -147,6 +158,9 @@ export function OrdenDetailHeader({
         </Badge>
         <Badge variant={getBadgeVariant(orden.tipoServicio)}>
           {SERVICE_TYPE_LABELS[orden.tipoServicio]}
+        </Badge>
+        <Badge variant={getSucursalBadgeVariant(orden.sucursal)}>
+          {SUCURSAL_LABELS[orden.sucursal]}
         </Badge>
       </div>
 

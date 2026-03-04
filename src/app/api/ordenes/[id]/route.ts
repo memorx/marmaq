@@ -272,6 +272,11 @@ export async function PATCH(
       updateData.coordenadasGPS = body.coordenadasGPS;
     }
 
+    // Sucursal
+    if (body.sucursal !== undefined) {
+      updateData.sucursal = body.sucursal;
+    }
+
     // Técnico asignado
     if (body.tecnicoId !== undefined) {
       if (body.tecnicoId === null) {
@@ -440,6 +445,7 @@ export async function PATCH(
       if (body.serieEquipo !== undefined) camposEditados.push("serieEquipo");
       if (body.fallaReportada !== undefined) camposEditados.push("fallaReportada");
       if (body.fechaPromesa !== undefined) camposEditados.push("fechaPromesa");
+      if (body.sucursal !== undefined) camposEditados.push("sucursal");
 
       if (camposEditados.length > 0 && !estadoCambiado && !tecnicoCambiado && !cotizacionEnviada) {
         await tx.historialOrden.create({

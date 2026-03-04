@@ -118,19 +118,26 @@ export async function POST(
     }
 
     // Validar tipos de archivo
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/heic"];
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedImageTypes = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+    const allowedVideoTypes = ["video/mp4", "video/quicktime", "video/webm"];
+    const allowedTypes = [...allowedImageTypes, ...allowedVideoTypes];
+    const maxImageSize = 10 * 1024 * 1024; // 10MB
+    const maxVideoSize = 50 * 1024 * 1024; // 50MB
 
     for (const file of files) {
       if (!allowedTypes.includes(file.type)) {
         return NextResponse.json(
-          { error: `Tipo de archivo no permitido: ${file.type}. Permitidos: JPG, PNG, WebP, HEIC` },
+          { error: `Tipo de archivo no permitido: ${file.type}. Permitidos: JPG, PNG, WebP, HEIC, MP4, MOV, WebM` },
           { status: 400 }
         );
       }
+      const isVideo = allowedVideoTypes.includes(file.type);
+      const maxSize = isVideo ? maxVideoSize : maxImageSize;
       if (file.size > maxSize) {
         return NextResponse.json(
-          { error: `Archivo muy grande: ${file.name}. Máximo 10MB` },
+          { error: isVideo
+              ? `El video es muy grande: ${file.name}. Máximo permitido: 50MB`
+              : `Archivo muy grande: ${file.name}. Máximo 10MB` },
           { status: 400 }
         );
       }
@@ -167,6 +174,7 @@ export async function POST(
       const publicUrl = getEvidenciaPublicUrl(filePath);
 
       // Crear registro en base de datos
+      const isVideo = allowedVideoTypes.includes(file.type);
       const evidencia = await prisma.evidencia.create({
         data: {
           ordenId,
@@ -174,6 +182,7 @@ export async function POST(
           url: publicUrl,
           filename: file.name,
           descripcion: descripcion || null,
+          esVideo: isVideo,
         },
       });
 
