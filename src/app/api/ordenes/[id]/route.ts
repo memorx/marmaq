@@ -325,14 +325,23 @@ export async function PATCH(
         data: updateData,
         include: {
           cliente: true,
-          tecnico: {
-            select: { id: true, name: true },
-          },
+          tecnico: true,
           creadoPor: {
-            select: { id: true, name: true },
+            select: { id: true, name: true, email: true },
           },
-          _count: {
-            select: { evidencias: true },
+          evidencias: {
+            orderBy: { createdAt: "desc" },
+          },
+          materialesUsados: {
+            include: { material: true },
+          },
+          historial: {
+            include: {
+              usuario: {
+                select: { id: true, name: true },
+              },
+            },
+            orderBy: { createdAt: "desc" },
           },
         },
       });

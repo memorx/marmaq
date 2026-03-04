@@ -58,6 +58,7 @@ export function EvidenciasSection({ ordenId, evidencias }: EvidenciasSectionProp
 
       {/* Componente de upload para el tipo seleccionado */}
       <EvidenciaUpload
+        key={tipoSeleccionado}
         ordenId={ordenId}
         tipo={tipoSeleccionado}
         evidenciasExistentes={evidenciasPorTipo(tipoSeleccionado)}
