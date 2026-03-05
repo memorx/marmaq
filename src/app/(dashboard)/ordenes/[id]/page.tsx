@@ -8,6 +8,7 @@ import {
   HistorialTimeline,
   EnviarWhatsAppModal,
   FirmaModal,
+  FirmaFotoUpload,
   OrdenDetailHeader,
   EstadoTimeline,
   NotasTecnicoCard,
@@ -38,6 +39,7 @@ export default function OrdenDetallePage({ params }: PageProps) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [firmaModalOpen, setFirmaModalOpen] = useState(false);
+  const [firmaFotoMode, setFirmaFotoMode] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pendingDelivery, setPendingDelivery] = useState(false);
 
@@ -117,6 +119,13 @@ export default function OrdenDetallePage({ params }: PageProps) {
       setPendingDelivery(false);
       await actualizarEstado("ENTREGADO");
     }
+  };
+
+  const handleFirmaFotoSuccess = (url: string) => {
+    if (orden) {
+      setOrden({ ...orden, firmaFotoUrl: url });
+    }
+    setFirmaFotoMode(false);
   };
 
   const handleGeneratePdf = async (tipo: "comprobante" | "completo" = "completo") => {
@@ -302,6 +311,7 @@ export default function OrdenDetallePage({ params }: PageProps) {
           onCambiarEstado={handleCambiarEstado}
           updating={updating}
           onFirmaModal={() => setFirmaModalOpen(true)}
+          onFirmaFotoUpload={() => setFirmaFotoMode(true)}
         />
       </div>
 
@@ -343,6 +353,19 @@ export default function OrdenDetallePage({ params }: PageProps) {
         clienteNombre={orden.cliente.nombre}
         onSuccess={handleFirmaSuccess}
       />
+
+      {/* Modal de Foto de Firma */}
+      {firmaFotoMode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-4">
+            <FirmaFotoUpload
+              ordenId={orden.id}
+              onSuccess={handleFirmaFotoSuccess}
+              onCancel={() => setFirmaFotoMode(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

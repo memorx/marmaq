@@ -34,6 +34,7 @@ vi.mock("@/lib/supabase/client", () => ({
   },
   FIRMAS_BUCKET: "firmas",
   generateFirmaPath: vi.fn(() => "ordenes/orden-1/firma_123456.png"),
+  generateFirmaFotoPath: vi.fn(() => "ordenes/orden-1/firma_foto_123456.jpg"),
   getFirmaPublicUrl: vi.fn(() => "https://example.com/firmas/ordenes/orden-1/firma_123456.png"),
 }));
 

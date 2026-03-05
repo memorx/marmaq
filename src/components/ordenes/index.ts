@@ -4,6 +4,7 @@ export { HistorialTimeline } from "./HistorialTimeline";
 export { EnviarWhatsAppModal } from "./EnviarWhatsAppModal";
 export { FirmaModal } from "./FirmaModal";
 export { FirmaCanvas } from "./FirmaCanvas";
+export { FirmaFotoUpload } from "./FirmaFotoUpload";
 export { OrdenDetailHeader } from "./OrdenDetailHeader";
 export { EstadoTimeline } from "./EstadoTimeline";
 export { NotasTecnicoCard } from "./NotasTecnicoCard";

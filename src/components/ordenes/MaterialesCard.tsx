@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, Badge } from "@/components/ui";
 import { Package, Plus, Trash2 } from "lucide-react";
 import type { OrdenConRelaciones } from "@/types/ordenes";
 import { AgregarMaterialModal } from "./AgregarMaterialModal";
@@ -11,6 +11,13 @@ interface MaterialesCardProps {
   ordenId: string;
   canEdit: boolean;
   onMaterialChanged: () => void;
+}
+
+function getNombreMaterial(mu: OrdenConRelaciones["materialesUsados"][number]): string {
+  if (mu.esManual) {
+    return mu.descripcionManual || "Material manual";
+  }
+  return mu.material?.nombre || "Material";
 }
 
 export function MaterialesCard({
@@ -86,8 +93,16 @@ export function MaterialesCard({
                 {materialesUsados.map((mu) => (
                   <tr key={mu.id}>
                     <td className="py-3">
-                      <p className="font-medium text-gray-900">{mu.material.nombre}</p>
-                      <p className="text-sm text-gray-500">{mu.material.sku}</p>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <p className="font-medium text-gray-900">{getNombreMaterial(mu)}</p>
+                          {mu.esManual ? (
+                            <Badge variant="warning" className="mt-0.5 text-[10px] px-1.5 py-0">Manual</Badge>
+                          ) : (
+                            <p className="text-sm text-gray-500">{mu.material?.sku}</p>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="py-3 text-gray-700">{mu.cantidad}</td>
                     <td className="py-3 text-right text-gray-700">
@@ -98,7 +113,7 @@ export function MaterialesCard({
                     {canEdit && (
                       <td className="py-3 text-right">
                         <button
-                          onClick={() => handleDelete(mu.id, mu.material.nombre)}
+                          onClick={() => handleDelete(mu.id, getNombreMaterial(mu))}
                           disabled={deleting === mu.id}
                           className="p-1 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
                         >
@@ -120,12 +135,19 @@ export function MaterialesCard({
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-gray-900 text-sm truncate">{mu.material.nombre}</p>
-                  <p className="text-xs text-gray-500">{mu.material.sku}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-medium text-gray-900 text-sm truncate">{getNombreMaterial(mu)}</p>
+                    {mu.esManual && (
+                      <Badge variant="warning" className="text-[10px] px-1.5 py-0 flex-shrink-0">Manual</Badge>
+                    )}
+                  </div>
+                  {!mu.esManual && mu.material?.sku && (
+                    <p className="text-xs text-gray-500">{mu.material.sku}</p>
+                  )}
                 </div>
                 <div className="text-right ml-3 flex-shrink-0 flex items-center gap-2">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">×{mu.cantidad}</p>
+                    <p className="text-sm font-medium text-gray-900">&times;{mu.cantidad}</p>
                     <p className="text-xs text-gray-500">
                       {mu.precioUnitario
                         ? `$${Number(mu.precioUnitario).toFixed(2)}`
@@ -134,7 +156,7 @@ export function MaterialesCard({
                   </div>
                   {canEdit && (
                     <button
-                      onClick={() => handleDelete(mu.id, mu.material.nombre)}
+                      onClick={() => handleDelete(mu.id, getNombreMaterial(mu))}
                       disabled={deleting === mu.id}
                       className="p-1 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
                     >

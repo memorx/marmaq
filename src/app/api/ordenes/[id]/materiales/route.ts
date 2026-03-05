@@ -6,10 +6,16 @@ import { canAccessOrden, unauthorizedResponse } from "@/lib/auth/authorize";
 
 type RouteParams = Promise<{ id: string }>;
 
-const AgregarMaterialSchema = z.object({
+const AgregarMaterialCatalogoSchema = z.object({
   materialId: z.string().min(1, "materialId es requerido"),
   cantidad: z.number().int().min(1, "cantidad debe ser al menos 1"),
   precioUnitario: z.number().optional(),
+});
+
+const AgregarMaterialManualSchema = z.object({
+  descripcionManual: z.string().min(1, "descripcionManual es requerido"),
+  cantidad: z.number().int().min(1, "cantidad debe ser al menos 1"),
+  precioUnitario: z.number().min(0, "precioUnitario debe ser >= 0"),
 });
 
 // POST /api/ordenes/[id]/materiales - Agregar material a orden
@@ -42,10 +48,71 @@ export async function POST(
       return unauthorizedResponse("No tienes permisos para modificar esta orden");
     }
 
-    // Validar body
     const body = await request.json();
-    const parsed = AgregarMaterialSchema.safeParse(body);
 
+    const hasMaterialId = body.materialId !== undefined && body.materialId !== null && body.materialId !== "";
+    const hasDescripcionManual = body.descripcionManual !== undefined && body.descripcionManual !== null && body.descripcionManual !== "";
+
+    // Validar que venga uno u otro, no ambos, no ninguno
+    if (hasMaterialId && hasDescripcionManual) {
+      return NextResponse.json(
+        { error: "No se puede enviar materialId y descripcionManual al mismo tiempo" },
+        { status: 400 }
+      );
+    }
+
+    if (!hasMaterialId && !hasDescripcionManual) {
+      return NextResponse.json(
+        { error: "Se requiere materialId o descripcionManual" },
+        { status: 400 }
+      );
+    }
+
+    // === MATERIAL MANUAL ===
+    if (hasDescripcionManual) {
+      const parsed = AgregarMaterialManualSchema.safeParse(body);
+      if (!parsed.success) {
+        return NextResponse.json(
+          { error: parsed.error.issues[0].message },
+          { status: 400 }
+        );
+      }
+
+      const { descripcionManual, cantidad, precioUnitario } = parsed.data;
+
+      const materialUsado = await prisma.$transaction(async (tx) => {
+        const created = await tx.materialUsado.create({
+          data: {
+            ordenId,
+            esManual: true,
+            descripcionManual,
+            cantidad,
+            precioUnitario,
+          },
+          include: { material: true },
+        });
+
+        await tx.historialOrden.create({
+          data: {
+            ordenId,
+            usuarioId: session.user.id,
+            accion: "MATERIAL_AGREGADO",
+            detalles: {
+              materialNombre: `(manual) ${descripcionManual}`,
+              cantidad,
+              esManual: true,
+            },
+          },
+        });
+
+        return created;
+      });
+
+      return NextResponse.json(materialUsado, { status: 201 });
+    }
+
+    // === MATERIAL DEL CATÁLOGO ===
+    const parsed = AgregarMaterialCatalogoSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0].message },

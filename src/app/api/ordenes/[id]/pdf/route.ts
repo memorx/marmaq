@@ -441,7 +441,10 @@ export async function GET(
           const subtotal = precioUnit * mu.cantidad;
           totalMateriales += subtotal;
 
-          doc.text(mu.material.nombre, marginLeft, y, { width: 270 });
+          const nombreMaterial = mu.esManual
+            ? mu.descripcionManual || "Material manual"
+            : mu.material?.nombre || "Material";
+          doc.text(nombreMaterial, marginLeft, y, { width: 270 });
           doc.text(String(mu.cantidad), marginLeft + 280, y);
           doc.text(formatCurrency(precioUnit), marginLeft + 340, y);
           doc.text(formatCurrency(subtotal), marginLeft + 420, y);

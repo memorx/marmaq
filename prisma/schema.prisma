@@ -114,6 +114,7 @@ model Orden {
 
   // Firma del cliente al recibir
   firmaClienteUrl   String?       // URL de la imagen en Supabase Storage
+  firmaFotoUrl      String?       // URL de foto de firma en papel (Supabase Storage)
   firmaFecha        DateTime?     // Fecha/hora de la firma
 
   // Relaciones
@@ -229,8 +230,12 @@ model MaterialUsado {
   ordenId     String
   orden       Orden     @relation(fields: [ordenId], references: [id], onDelete: Cascade)
 
-  materialId  String
-  material    Material  @relation(fields: [materialId], references: [id])
+  materialId  String?
+  material    Material?  @relation(fields: [materialId], references: [id])
+
+  // Campos para material manual (no está en catálogo)
+  descripcionManual  String?
+  esManual           Boolean  @default(false)
 
   cantidad    Int
   precioUnitario Decimal? @db.Decimal(10, 2)

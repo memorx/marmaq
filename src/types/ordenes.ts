@@ -63,7 +63,7 @@ export type OrdenConRelaciones = Orden & {
   creadoPor: User;
   evidencias: Evidencia[];
   materialesUsados: (MaterialUsado & {
-    material: Material;
+    material: Material | null;
   })[];
   historial: (HistorialEstado & {
     usuario: User;

@@ -70,6 +70,12 @@ export function generateFirmaPath(ordenId: string): string {
   return `ordenes/${ordenId}/firma_${timestamp}.png`;
 }
 
+// Helper to generate file path for foto de firma en papel
+export function generateFirmaFotoPath(ordenId: string, extension: string): string {
+  const timestamp = Date.now();
+  return `ordenes/${ordenId}/firma_foto_${timestamp}.${extension}`;
+}
+
 // Helper to generate file path for avatar
 export function generateAvatarPath(userId: string, filename: string): string {
   const extension = filename.split(".").pop() || "jpg";

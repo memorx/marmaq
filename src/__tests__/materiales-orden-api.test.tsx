@@ -37,6 +37,7 @@ vi.mock("lucide-react", () => ({
   Trash2: () => <span data-testid="trash-icon">Trash2</span>,
   X: () => <span>X</span>,
   Search: () => <span>Search</span>,
+  PenLine: () => <span>PenLine</span>,
 }));
 
 import { POST } from "@/app/api/ordenes/[id]/materiales/route";

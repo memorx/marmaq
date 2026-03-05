@@ -48,12 +48,19 @@ export async function DELETE(
       );
     }
 
-    // Transaction: restaurar stock + eliminar MaterialUsado + historial
+    const nombreMaterial = materialUsado.esManual
+      ? materialUsado.descripcionManual || "Material manual"
+      : materialUsado.material?.nombre || "Material";
+
+    // Transaction: restaurar stock (si aplica) + eliminar MaterialUsado + historial
     await prisma.$transaction(async (tx) => {
-      await tx.material.update({
-        where: { id: materialUsado.materialId },
-        data: { stockActual: { increment: materialUsado.cantidad } },
-      });
+      // Solo restaurar stock si es material del catálogo
+      if (!materialUsado.esManual && materialUsado.materialId) {
+        await tx.material.update({
+          where: { id: materialUsado.materialId },
+          data: { stockActual: { increment: materialUsado.cantidad } },
+        });
+      }
 
       await tx.materialUsado.delete({
         where: { id: materialUsadoId },
@@ -65,7 +72,7 @@ export async function DELETE(
           usuarioId: session.user.id,
           accion: "MATERIAL_AGREGADO",
           detalles: {
-            eliminado: `${materialUsado.material.nombre} ×${materialUsado.cantidad}`,
+            eliminado: `${nombreMaterial} ×${materialUsado.cantidad}`,
           },
         },
       });

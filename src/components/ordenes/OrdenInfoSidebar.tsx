@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { Button, Card, Badge } from "@/components/ui";
+import { ImageLightbox, type LightboxImage } from "@/components/ui/ImageLightbox";
 import {
   Phone,
   Mail,
@@ -10,6 +12,7 @@ import {
   Calendar,
   Wrench,
   PenLine,
+  Camera,
 } from "lucide-react";
 import type { OrdenConRelaciones, EstadoOrden, SemaforoColor } from "@/types/ordenes";
 import type { AccionEstado } from "@/lib/constants/orden-detail";
@@ -21,6 +24,7 @@ interface OrdenInfoSidebarProps {
   onCambiarEstado: (estado: EstadoOrden) => void;
   updating: boolean;
   onFirmaModal: () => void;
+  onFirmaFotoUpload: () => void;
 }
 
 export function OrdenInfoSidebar({
@@ -29,7 +33,35 @@ export function OrdenInfoSidebar({
   onCambiarEstado,
   updating,
   onFirmaModal,
+  onFirmaFotoUpload,
 }: OrdenInfoSidebarProps) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  // Construir array de imagenes para el lightbox
+  const firmaImages: LightboxImage[] = [];
+  if (orden.firmaClienteUrl) {
+    firmaImages.push({
+      url: orden.firmaClienteUrl,
+      tipo: "Firma digital",
+    });
+  }
+  if (orden.firmaFotoUrl) {
+    firmaImages.push({
+      url: orden.firmaFotoUrl,
+      tipo: "Firma en papel",
+    });
+  }
+
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
+  const hasFirmaDigital = !!orden.firmaClienteUrl;
+  const hasFirmaFoto = !!orden.firmaFotoUrl;
+  const hasAnyFirma = hasFirmaDigital || hasFirmaFoto;
+
   return (
     <div className="space-y-4 lg:space-y-6">
       {/* 1. Card Información */}
@@ -211,33 +243,73 @@ export function OrdenInfoSidebar({
       <Card className="p-4 lg:p-6">
         <div className="flex items-center justify-between mb-3 lg:mb-4">
           <h2 className="text-base lg:text-lg font-semibold text-[#092139]">Firma del Cliente</h2>
-          {!orden.firmaClienteUrl && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onFirmaModal}
-              className="flex items-center gap-1"
-            >
-              <PenLine className="w-4 h-4" />
-              <span className="hidden sm:inline">Capturar</span>
-            </Button>
-          )}
+          <div className="flex gap-1">
+            {!hasFirmaDigital && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onFirmaModal}
+                className="flex items-center gap-1 min-h-[36px]"
+              >
+                <PenLine className="w-4 h-4" />
+                <span className="hidden sm:inline">Capturar</span>
+              </Button>
+            )}
+            {!hasFirmaFoto && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onFirmaFotoUpload}
+                className="flex items-center gap-1 min-h-[36px]"
+              >
+                <Camera className="w-4 h-4" />
+                <span className="hidden sm:inline">Foto</span>
+              </Button>
+            )}
+          </div>
         </div>
 
-        {orden.firmaClienteUrl ? (
+        {hasAnyFirma ? (
           <div className="space-y-3">
-            <div className="border border-gray-200 rounded-lg p-2 bg-gray-50 relative h-32">
-              <Image
-                src={orden.firmaClienteUrl}
-                alt="Firma del cliente"
-                fill
-                className="object-contain"
-                unoptimized
-              />
-            </div>
-            <p className="text-xs text-gray-500 text-center">
-              Firmado el {orden.firmaFecha ? formatDateTime(orden.firmaFecha) : "—"}
-            </p>
+            {hasFirmaDigital && (
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Firma digital</p>
+                <button
+                  onClick={() => openLightbox(0)}
+                  className="w-full border border-gray-200 rounded-lg p-2 bg-gray-50 relative h-32 cursor-pointer hover:border-[#31A7D4] transition-colors"
+                >
+                  <Image
+                    src={orden.firmaClienteUrl!}
+                    alt="Firma digital del cliente"
+                    fill
+                    className="object-contain"
+                    unoptimized
+                  />
+                </button>
+                {orden.firmaFecha && (
+                  <p className="text-xs text-gray-500 text-center mt-1">
+                    Firmado el {formatDateTime(orden.firmaFecha)}
+                  </p>
+                )}
+              </div>
+            )}
+            {hasFirmaFoto && (
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Firma en papel</p>
+                <button
+                  onClick={() => openLightbox(hasFirmaDigital ? 1 : 0)}
+                  className="w-full border border-gray-200 rounded-lg p-2 bg-gray-50 relative h-32 cursor-pointer hover:border-[#31A7D4] transition-colors"
+                >
+                  <Image
+                    src={orden.firmaFotoUrl!}
+                    alt="Foto de firma en papel"
+                    fill
+                    className="object-contain"
+                    unoptimized
+                  />
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-6 text-gray-500">
@@ -249,6 +321,14 @@ export function OrdenInfoSidebar({
           </div>
         )}
       </Card>
+
+      {/* Lightbox para firmas */}
+      <ImageLightbox
+        images={firmaImages}
+        initialIndex={lightboxIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
 
       {/* Info adicional para Garantía */}
       {orden.tipoServicio === "GARANTIA" && orden.numeroFactura && (
