@@ -68,6 +68,9 @@ describe("Prisma Client Configuration", () => {
 
       expect(mockPool).toHaveBeenCalledWith({
         connectionString: "postgresql://user:pass@host:5432/db",
+        max: 5,
+        idleTimeoutMillis: 30_000,
+        connectionTimeoutMillis: 10_000,
       });
     });
 
@@ -140,17 +143,17 @@ describe("Prisma Client Configuration", () => {
       expect(globalForPrisma.prisma).toBe(prisma);
     });
 
-    it("no guarda el cliente en global en producción", async () => {
+    it("guarda el cliente en global también en producción (singleton serverless)", async () => {
       process.env.DATABASE_URL = "postgresql://user:pass@host:5432/db";
       process.env.NODE_ENV = "production";
 
       const globalForPrisma = globalThis as { prisma?: unknown };
       delete globalForPrisma.prisma;
 
-      await import("@/lib/db/prisma");
+      const { prisma } = await import("@/lib/db/prisma");
 
-      // En producción, no se asigna a global
-      expect(globalForPrisma.prisma).toBeUndefined();
+      // En producción también se cachea para evitar múltiples pools en serverless
+      expect(globalForPrisma.prisma).toBe(prisma);
     });
   });
 

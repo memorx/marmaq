@@ -13,7 +13,13 @@ function createPrismaClient(): PrismaClient {
     throw new Error("DATABASE_URL environment variable is not set");
   }
 
-  const pool = new Pool({ connectionString });
+  const pool = new Pool({
+    connectionString,
+    max: 5,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
+  });
+
   const adapter = new PrismaPg(pool);
 
   return new PrismaClient({ adapter });
@@ -21,7 +27,8 @@ function createPrismaClient(): PrismaClient {
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== "production") {
+// Cachear en TODOS los entornos para evitar múltiples pools en producción serverless
+if (!globalForPrisma.prisma) {
   globalForPrisma.prisma = prisma;
 }
 

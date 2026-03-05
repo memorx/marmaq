@@ -10,7 +10,7 @@ export default defineConfig({
     seed: "npx tsx prisma/seed.ts",
   },
   datasource: {
-    // Usar DATABASE_URL (pooler) para compatibilidad con Vercel/Supabase
-    url: process.env["DATABASE_URL"],
+    // Usar DIRECT_URL para migraciones (conexión directa, sin pgbouncer)
+    url: process.env["DIRECT_URL"] || process.env["DATABASE_URL"],
   },
 });
