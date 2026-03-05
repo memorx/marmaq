@@ -88,8 +88,81 @@ export function EvidenciaUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  // Manejar archivos seleccionados
-  const handleFiles = useCallback((files: FileList | null) => {
+  // Subir archivos a la API — recibe archivos y sus preview URLs directamente
+  const doUpload = useCallback(async (
+    filesToUpload: File[],
+    previewUrls: string[]
+  ) => {
+    if (!ordenId || filesToUpload.length === 0) return;
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    const urlSet = new Set(previewUrls);
+
+    // Marcar como uploading
+    setPreviews((prev) =>
+      prev.map((p) =>
+        urlSet.has(p.preview) ? { ...p, status: "uploading" as const } : p
+      )
+    );
+
+    const formData = new FormData();
+    formData.append("tipo", tipo);
+    filesToUpload.forEach((f) => formData.append("files", f));
+
+    try {
+      const response = await fetch(`/api/ordenes/${ordenId}/evidencias`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Error al subir");
+      }
+
+      const data = await response.json();
+
+      // Marcar como success
+      setPreviews((prev) =>
+        prev.map((p) =>
+          urlSet.has(p.preview) ? { ...p, status: "success" as const } : p
+        )
+      );
+
+      // Agregar a evidencias existentes
+      setEvidencias((prev) => [...data.evidencias, ...prev]);
+
+      // Limpiar previews exitosos después de un momento
+      setTimeout(() => {
+        setPreviews((prev) => prev.filter((p) => !urlSet.has(p.preview)));
+      }, 1500);
+
+      if (onUploadComplete) {
+        onUploadComplete(data.evidencias);
+      }
+    } catch (error) {
+      console.error("Error uploading:", error);
+      setPreviews((prev) =>
+        prev.map((p) =>
+          urlSet.has(p.preview)
+            ? {
+                ...p,
+                status: "error" as const,
+                error: error instanceof Error ? error.message : "Error desconocido",
+              }
+            : p
+        )
+      );
+    } finally {
+      setUploading(false);
+      setUploadProgress(100);
+    }
+  }, [ordenId, tipo, onUploadComplete]);
+
+  // Manejar archivos seleccionados — sube automáticamente si hay ordenId
+  const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     const currentCount = previews.length + evidencias.length;
@@ -118,6 +191,8 @@ export function EvidenciaUpload({
       return true;
     });
 
+    if (validFiles.length === 0) return;
+
     const newPreviews: PreviewFile[] = validFiles.map((file) => ({
       file,
       preview: URL.createObjectURL(file),
@@ -126,12 +201,32 @@ export function EvidenciaUpload({
 
     setPreviews((prev) => [...prev, ...newPreviews]);
 
-    // Notificar al padre si no hay ordenId (modo local)
+    // Reset file inputs para permitir re-selección del mismo archivo
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+
+    // Modo local (sin ordenId): notificar al padre
     if (!ordenId && onFilesChange) {
       const allFiles = [...previews.map((p) => p.file), ...validFiles];
       onFilesChange(allFiles);
+      return;
     }
-  }, [previews, evidencias.length, maxFiles, ordenId, onFilesChange, showToast]);
+
+    // Auto-upload cuando hay ordenId
+    if (ordenId) {
+      await doUpload(validFiles, newPreviews.map((p) => p.preview));
+    }
+  }, [previews, evidencias.length, maxFiles, ordenId, onFilesChange, showToast, doUpload]);
+
+  // Reintentar subida de archivos fallidos o pendientes
+  const retryUpload = async () => {
+    const toRetry = previews.filter((p) => p.status === "pending" || p.status === "error");
+    if (toRetry.length === 0) return;
+    await doUpload(
+      toRetry.map((p) => p.file),
+      toRetry.map((p) => p.preview)
+    );
+  };
 
   // Drag & Drop handlers
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -171,70 +266,6 @@ export function EvidenciaUpload({
     });
   }, [ordenId, onFilesChange]);
 
-  // Subir archivos
-  const uploadFiles = async () => {
-    if (!ordenId || previews.length === 0) return;
-
-    setUploading(true);
-    setUploadProgress(0);
-
-    const formData = new FormData();
-    formData.append("tipo", tipo);
-
-    previews.forEach((p) => {
-      formData.append("files", p.file);
-    });
-
-    try {
-      // Actualizar estado a uploading
-      setPreviews((prev) =>
-        prev.map((p) => ({ ...p, status: "uploading" as const }))
-      );
-
-      const response = await fetch(`/api/ordenes/${ordenId}/evidencias`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Error al subir");
-      }
-
-      const data = await response.json();
-
-      // Actualizar estado a success
-      setPreviews((prev) =>
-        prev.map((p) => ({ ...p, status: "success" as const }))
-      );
-
-      // Agregar a evidencias existentes
-      setEvidencias((prev) => [...data.evidencias, ...prev]);
-
-      // Limpiar previews después de un momento
-      setTimeout(() => {
-        setPreviews([]);
-      }, 1500);
-
-      // Notificar al padre
-      if (onUploadComplete) {
-        onUploadComplete(data.evidencias);
-      }
-    } catch (error) {
-      console.error("Error uploading:", error);
-      setPreviews((prev) =>
-        prev.map((p) => ({
-          ...p,
-          status: "error" as const,
-          error: error instanceof Error ? error.message : "Error desconocido",
-        }))
-      );
-    } finally {
-      setUploading(false);
-      setUploadProgress(100);
-    }
-  };
-
   // Eliminar evidencia existente
   const deleteEvidencia = async (evidenciaId: string) => {
     if (!ordenId) return;
@@ -262,6 +293,7 @@ export function EvidenciaUpload({
 
   const totalFiles = previews.length + evidencias.length;
   const canAddMore = totalFiles < maxFiles;
+  const retryableCount = previews.filter((p) => p.status === "pending" || p.status === "error").length;
 
   // Build lightbox images from existing evidencias
   const lightboxImages: LightboxImage[] = evidencias.map((e) => ({
@@ -289,16 +321,15 @@ export function EvidenciaUpload({
             ({totalFiles}/{maxFiles})
           </span>
         </div>
-        {ordenId && previews.length > 0 && (
+        {ordenId && retryableCount > 0 && !uploading && (
           <Button
             size="sm"
-            onClick={uploadFiles}
-            isLoading={uploading}
+            onClick={retryUpload}
             disabled={uploading}
             className="flex-shrink-0"
           >
             <Upload className="w-4 h-4 mr-1" />
-            Subir {previews.length}
+            Reintentar {retryableCount}
           </Button>
         )}
       </div>
@@ -327,7 +358,8 @@ export function EvidenciaUpload({
           {/* Botón GRANDE de cámara - Principal en móvil */}
           <button
             onClick={() => cameraInputRef.current?.click()}
-            className="flex-1 flex items-center justify-center gap-3 py-4 sm:py-3 bg-[#31A7D4] text-white rounded-xl font-medium active:scale-[0.98] transition-transform shadow-sm"
+            disabled={uploading}
+            className="flex-1 flex items-center justify-center gap-3 py-4 sm:py-3 bg-[#31A7D4] text-white rounded-xl font-medium active:scale-[0.98] transition-transform shadow-sm disabled:opacity-50"
           >
             <Camera className="w-6 h-6 sm:w-5 sm:h-5" />
             <span className="text-base sm:text-sm">Tomar Foto</span>
@@ -336,7 +368,8 @@ export function EvidenciaUpload({
           {/* Botón de galería */}
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-4 sm:py-3 px-4 border-2 border-gray-300 text-gray-700 rounded-xl font-medium active:scale-[0.98] transition-transform hover:border-[#31A7D4] hover:text-[#31A7D4]"
+            disabled={uploading}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-4 sm:py-3 px-4 border-2 border-gray-300 text-gray-700 rounded-xl font-medium active:scale-[0.98] transition-transform hover:border-[#31A7D4] hover:text-[#31A7D4] disabled:opacity-50"
           >
             <ImagePlus className="w-5 h-5" />
             <span className="text-sm">Galería</span>
@@ -382,13 +415,21 @@ export function EvidenciaUpload({
               key={preview.preview}
               className="relative aspect-square rounded-lg overflow-hidden bg-gray-100"
             >
-              <Image
-                src={preview.preview}
-                alt={`Preview ${index + 1}`}
-                fill
-                className="object-cover"
-                unoptimized
-              />
+              {/* Preview con <img> nativo — next/image no soporta blob: URLs */}
+              {isVideoFile(preview.file) ? (
+                <video
+                  src={preview.preview}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  muted
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={preview.preview}
+                  alt={`Preview ${index + 1}`}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              )}
 
               {/* Overlay de estado */}
               <div
@@ -413,8 +454,8 @@ export function EvidenciaUpload({
                 )}
               </div>
 
-              {/* Botón eliminar - siempre visible en móvil */}
-              {preview.status === "pending" && (
+              {/* Botón eliminar — solo visible si pendiente o error */}
+              {(preview.status === "pending" || preview.status === "error") && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -426,10 +467,15 @@ export function EvidenciaUpload({
                 </button>
               )}
 
-              {/* Badge "Nuevo" */}
-              {preview.status === "pending" && (
-                <span className="absolute bottom-1 left-1 bg-orange-500 text-white text-[10px] lg:text-xs px-1.5 py-0.5 rounded shadow">
-                  Nuevo
+              {/* Badge de estado */}
+              {preview.status === "uploading" && (
+                <span className="absolute bottom-1 left-1 bg-[#31A7D4] text-white text-[10px] lg:text-xs px-1.5 py-0.5 rounded shadow">
+                  Subiendo…
+                </span>
+              )}
+              {preview.status === "error" && (
+                <span className="absolute bottom-1 left-1 bg-red-500 text-white text-[10px] lg:text-xs px-1.5 py-0.5 rounded shadow">
+                  Error
                 </span>
               )}
             </div>
