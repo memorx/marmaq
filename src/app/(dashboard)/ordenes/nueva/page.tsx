@@ -445,7 +445,7 @@ export default function NuevaOrdenPage() {
           <Card className="p-4 lg:p-6">
             <h2 className="text-base lg:text-lg font-semibold text-[#092139] mb-3">Sucursal</h2>
             <div className="flex gap-4 flex-wrap">
-              {(["MEXICALTZINGO", "LA_PAZ", "ABASTOS"] as Sucursal[]).map((suc) => (
+              {(["MEXICALTZINGO", "LA_PAZ", "ABASTOS", "DOMICILIO"] as Sucursal[]).map((suc) => (
                 <label key={suc} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"

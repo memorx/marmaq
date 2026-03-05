@@ -55,10 +55,12 @@ export const SUCURSAL_LABELS: Record<Sucursal, string> = {
   MEXICALTZINGO: "Mexicaltzingo (Matriz)",
   LA_PAZ: "La Paz",
   ABASTOS: "Abastos",
+  DOMICILIO: "Servicio a Domicilio",
 };
 
 export const SUCURSAL_SHORT_LABELS: Record<Sucursal, string> = {
   MEXICALTZINGO: "MEX",
   LA_PAZ: "PAZ",
   ABASTOS: "ABA",
+  DOMICILIO: "DOM",
 };

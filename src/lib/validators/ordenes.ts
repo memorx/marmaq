@@ -13,7 +13,7 @@ const PrioridadEnum = z.enum(["BAJA", "NORMAL", "ALTA", "URGENTE"]);
 
 const CondicionEquipoEnum = z.enum(["BUENA", "REGULAR", "MALA"]);
 
-const SucursalEnum = z.enum(["MEXICALTZINGO", "LA_PAZ", "ABASTOS"]);
+const SucursalEnum = z.enum(["MEXICALTZINGO", "LA_PAZ", "ABASTOS", "DOMICILIO"]);
 
 const EstadoOrdenEnum = z.enum([
   "RECIBIDO",

@@ -171,6 +171,7 @@ enum Sucursal {
   MEXICALTZINGO
   LA_PAZ
   ABASTOS
+  DOMICILIO
 }
 
 // ============ EVIDENCIAS FOTOGRÁFICAS ============

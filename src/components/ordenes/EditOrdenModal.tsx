@@ -365,7 +365,7 @@ export function EditOrdenModal({ orden, isOpen, onClose, onSave }: EditOrdenModa
                     onChange={(e) => setFormData({ ...formData, sucursal: e.target.value as Sucursal })}
                     className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
                   >
-                    {(["MEXICALTZINGO", "LA_PAZ", "ABASTOS"] as Sucursal[]).map((s) => (
+                    {(["MEXICALTZINGO", "LA_PAZ", "ABASTOS", "DOMICILIO"] as Sucursal[]).map((s) => (
                       <option key={s} value={s}>{SUCURSAL_LABELS[s]}</option>
                     ))}
                   </select>

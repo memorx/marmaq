@@ -31,11 +31,12 @@ interface OrdenDetailHeaderProps {
   generatingPdf: boolean;
 }
 
-function getSucursalBadgeVariant(sucursal: Sucursal): "info" | "success" | "warning" {
-  const map: Record<Sucursal, "info" | "success" | "warning"> = {
+function getSucursalBadgeVariant(sucursal: Sucursal): "info" | "success" | "warning" | "centro" {
+  const map: Record<Sucursal, "info" | "success" | "warning" | "centro"> = {
     MEXICALTZINGO: "info",
     LA_PAZ: "success",
     ABASTOS: "warning",
+    DOMICILIO: "centro",
   };
   return map[sucursal];
 }

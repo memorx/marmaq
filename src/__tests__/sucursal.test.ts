@@ -57,16 +57,18 @@ describe("Sucursal — Zod validation", () => {
 });
 
 describe("Sucursal — Labels", () => {
-  it("SUCURSAL_LABELS tiene las 3 sucursales", () => {
+  it("SUCURSAL_LABELS tiene las 4 sucursales", () => {
     expect(SUCURSAL_LABELS).toHaveProperty("MEXICALTZINGO");
     expect(SUCURSAL_LABELS).toHaveProperty("LA_PAZ");
     expect(SUCURSAL_LABELS).toHaveProperty("ABASTOS");
-    expect(Object.keys(SUCURSAL_LABELS)).toHaveLength(3);
+    expect(SUCURSAL_LABELS).toHaveProperty("DOMICILIO");
+    expect(Object.keys(SUCURSAL_LABELS)).toHaveLength(4);
   });
 
-  it("SUCURSAL_SHORT_LABELS tiene las 3 sucursales con abreviaciones", () => {
+  it("SUCURSAL_SHORT_LABELS tiene las 4 sucursales con abreviaciones", () => {
     expect(SUCURSAL_SHORT_LABELS.MEXICALTZINGO).toBe("MEX");
     expect(SUCURSAL_SHORT_LABELS.LA_PAZ).toBe("PAZ");
     expect(SUCURSAL_SHORT_LABELS.ABASTOS).toBe("ABA");
+    expect(SUCURSAL_SHORT_LABELS.DOMICILIO).toBe("DOM");
   });
 });
