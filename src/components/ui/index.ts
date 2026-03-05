@@ -4,3 +4,4 @@ export { Card, CardHeader, CardContent, CardFooter } from "./card";
 export { Badge } from "./badge";
 export { ImageLightbox } from "./ImageLightbox";
 export type { LightboxImage } from "./ImageLightbox";
+export { UserAvatar } from "./UserAvatar";

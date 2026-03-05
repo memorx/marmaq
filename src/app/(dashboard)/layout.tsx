@@ -20,6 +20,7 @@ export default async function DashboardLayout({
         name: session.user.name || "Usuario",
         email: session.user.email || "",
         role: session.user.role || "TECNICO",
+        avatarUrl: session.user.avatarUrl || null,
       }}
     >
       {children}

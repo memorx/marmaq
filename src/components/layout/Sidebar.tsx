@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils/cn";
+import { UserAvatar } from "@/components/ui";
 import { useEasterEgg } from "@/hooks/useEasterEgg";
 import EasterEggOverlay from "@/components/EasterEgg";
 import {
@@ -24,6 +25,7 @@ interface SidebarProps {
     name: string;
     email: string;
     role: string;
+    avatarUrl?: string | null;
   };
   isOpen: boolean;
   onClose: () => void;
@@ -43,15 +45,6 @@ const navItems = [
 export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { handleClick: handleEasterEgg, showOverlay, dismissOverlay, shake, toast } = useEasterEgg();
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
 
   const getRoleLabel = (role: string) => {
     const roles: Record<string, string> = {
@@ -147,11 +140,9 @@ export function Sidebar({ user, isOpen, onClose }: SidebarProps) {
         {/* User section */}
         <div className="p-4 border-t border-white/10">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 lg:w-9 lg:h-9 rounded-full bg-[#D57828] flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm font-semibold">
-                {getInitials(user.name)}
-              </span>
-            </div>
+            <Link href="/perfil" onClick={handleNavClick} className="flex-shrink-0">
+              <UserAvatar user={{ name: user.name, avatarUrl: user.avatarUrl }} size="md" />
+            </Link>
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm font-medium truncate">{user.name}</p>
               <p className="text-white/50 text-xs">{getRoleLabel(user.role)}</p>

@@ -12,6 +12,7 @@ interface DashboardLayoutClientProps {
     name: string;
     email: string;
     role: string;
+    avatarUrl?: string | null;
   };
   children: React.ReactNode;
 }
@@ -26,6 +27,7 @@ const routeTitles: Record<string, { title: string; subtitle?: string }> = {
   "/reportes": { title: "Reportes", subtitle: "Generación de reportes" },
   "/usuarios": { title: "Usuarios", subtitle: "Gestión de usuarios" },
   "/configuracion": { title: "Configuración", subtitle: "Ajustes del sistema" },
+  "/perfil": { title: "Mi Perfil", subtitle: "Tu información" },
 };
 
 export function DashboardLayoutClient({ user, children }: DashboardLayoutClientProps) {

@@ -14,6 +14,7 @@ model User {
   password      String
   role          Role      @default(TECNICO)
   activo        Boolean   @default(true)
+  avatarUrl     String?
 
   // Relaciones
   ordenesAsignadas  Orden[]   @relation("TecnicoAsignado")

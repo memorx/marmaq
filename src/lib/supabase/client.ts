@@ -38,6 +38,7 @@ export const supabase = new Proxy({} as SupabaseClient, {
 // Bucket names
 export const EVIDENCIAS_BUCKET = "evidencias";
 export const FIRMAS_BUCKET = "firmas";
+export const AVATARS_BUCKET = "avatars";
 
 // Helper to get public URL for an evidencia
 export function getEvidenciaPublicUrl(path: string): string {
@@ -67,6 +68,24 @@ export function getFirmaPublicUrl(path: string): string {
 export function generateFirmaPath(ordenId: string): string {
   const timestamp = Date.now();
   return `ordenes/${ordenId}/firma_${timestamp}.png`;
+}
+
+// Helper to generate file path for avatar
+export function generateAvatarPath(userId: string, filename: string): string {
+  const extension = filename.split(".").pop() || "jpg";
+  return `${userId}.${extension}`;
+}
+
+// Helper to get public URL for an avatar
+export function getAvatarPublicUrl(path: string): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return "";
+
+  const { data } = supabase.storage
+    .from(AVATARS_BUCKET)
+    .getPublicUrl(path);
+
+  return data.publicUrl;
 }
 
 // Helper to generate file path for evidencia
