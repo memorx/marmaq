@@ -561,7 +561,7 @@ export function EvidenciaUpload({
       {totalFiles === 0 && disabled && (
         <div className="text-center py-8 text-gray-500">
           <Camera className="w-10 h-10 mx-auto mb-2 opacity-30" />
-          <p>Sin evidencias fotográficas</p>
+          <p>Sin evidencias</p>
         </div>
       )}
 

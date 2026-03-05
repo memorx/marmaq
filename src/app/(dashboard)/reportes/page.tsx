@@ -338,7 +338,7 @@ export default function ReportesPage() {
             compatible con el sistema de call center.
           </li>
           <li>
-            Los reportes incluyen evidencias fotográficas como enlaces.
+            Los reportes incluyen evidencias (fotos y videos) como enlaces.
           </li>
         </ul>
       </div>

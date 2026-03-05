@@ -790,7 +790,7 @@ export default function NuevaOrdenPage() {
 
         {/* COLUMNA DERECHA */}
         <div className="space-y-6">
-          {/* Fotos de Recepción */}
+          {/* Evidencias de Recepción */}
           <Card className="p-6">
             <EvidenciaUpload
               tipo="RECEPCION"

@@ -21,7 +21,7 @@ export function EvidenciasSection({ ordenId, evidencias }: EvidenciasSectionProp
 
   return (
     <Card className="p-4 lg:p-6">
-      <h2 className="text-base lg:text-lg font-semibold text-[#092139] mb-4">Evidencia Fotográfica</h2>
+      <h2 className="text-base lg:text-lg font-semibold text-[#092139] mb-4">Evidencias</h2>
 
       {/* Tabs para tipos de evidencia - scroll horizontal en móvil */}
       <div className="overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0 mb-4 pb-4 border-b border-gray-100">
