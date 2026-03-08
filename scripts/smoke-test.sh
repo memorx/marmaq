@@ -211,7 +211,7 @@ else
 
   # Crear orden de prueba
   ORDER_BODY='{
-    "clienteNuevo": { "nombre": "SMOKE TEST" },
+    "clienteNuevo": { "nombre": "SMOKE TEST", "telefono": "0000000000" },
     "marcaEquipo": "Test",
     "modeloEquipo": "Test",
     "tipoServicio": "POR_COBRAR",
