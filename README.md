@@ -239,6 +239,30 @@ Tests cubren:
 - Utilidades (templates, formateo)
 - Componentes UI
 
+## Smoke Tests
+
+Smoke tests de post-deploy que verifican las rutas criticas via HTTP (solo requieren `curl` y `bash`).
+
+```bash
+# Contra produccion (www.marmaq.app)
+bash scripts/smoke-test.sh
+
+# Contra localhost:3000
+bash scripts/smoke-test.sh local
+
+# Contra URL custom
+bash scripts/smoke-test.sh https://staging.marmaq.app
+```
+
+El script verifica:
+- Paginas publicas (login, auth providers, CSRF)
+- Flujo de autenticacion con usuario de test
+- APIs protegidas (ordenes, dashboard, notificaciones, usuarios, chat)
+- Funcionalidad critica (crear orden, obtener, generar PDF, limpiar)
+- Conectividad con Supabase Storage
+
+Exit code 0 si todo pasa, 1 si algo falla.
+
 ## Deployment
 
 ### Vercel (Recomendado)
