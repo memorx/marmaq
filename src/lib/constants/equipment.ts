@@ -38,7 +38,6 @@ export const MARCA_OPTIONS = [
   "Coriat",
   "Euroquip",
   "Exmex",
-  "Fabatsa",
   "Imbera",
   "International",
   "JR",
