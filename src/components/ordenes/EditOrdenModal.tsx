@@ -592,7 +592,7 @@ export function EditOrdenModal({ orden, isOpen, onClose, onSave }: EditOrdenModa
                 </label>
               </div>
 
-              {formData.cotizacion && (
+              {typeof formData.cotizacion === 'number' && formData.cotizacion > 0 && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                   <p className="text-sm text-gray-500">Vista previa:</p>
                   <p className="text-2xl font-bold text-[#092139]">

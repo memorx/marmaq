@@ -34,28 +34,7 @@ const ACCESORIOS_PREDEFINIDOS = [
   "Cuchilla",
 ];
 
-// Opciones de tipos de equipo
-const TIPO_EQUIPO_OPTIONS = [
-  "Báscula",
-  "Molino",
-  "Rebanadora",
-  "Sierra",
-  "Empacadora",
-  "Refrigerador",
-  "Congelador",
-  "Vitrina",
-  "Otro",
-];
-
-// Opciones de marcas
-const MARCA_OPTIONS = [
-  "Torrey",
-  "Imbera",
-  "Migsa",
-  "Ojeda",
-  "Rhino",
-  "Otro",
-];
+import { TIPO_EQUIPO_OPTIONS, MARCA_OPTIONS } from "@/lib/constants/equipment";
 
 // Opciones de prioridad
 const PRIORIDAD_OPTIONS: { value: Prioridad; label: string }[] = [

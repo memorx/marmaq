@@ -11,7 +11,7 @@ import {
   type OrdenListItem,
   type SemaforoColor,
 } from "@/types/ordenes";
-import { Prisma, EstadoOrden, TipoServicio, Prioridad } from "@prisma/client";
+import { Prisma, EstadoOrden, TipoServicio, Prioridad, Sucursal } from "@prisma/client";
 import {
   crearOrdenConFolio,
   FolioGenerationError,
@@ -43,6 +43,8 @@ export async function GET(request: NextRequest) {
       semaforo: searchParams.get("semaforo") as SemaforoColor | undefined,
       fechaDesde: searchParams.get("fechaDesde") || undefined,
       fechaHasta: searchParams.get("fechaHasta") || undefined,
+      sucursal: searchParams.get("sucursal") || undefined,
+      marcaEquipo: searchParams.get("marcaEquipo") || undefined,
       page: parseInt(searchParams.get("page") || "1"),
       pageSize: parseInt(searchParams.get("pageSize") || "20"),
     };
@@ -80,6 +82,14 @@ export async function GET(request: NextRequest) {
 
     if (filters.clienteId) {
       where.clienteId = filters.clienteId;
+    }
+
+    if (filters.sucursal) {
+      where.sucursal = filters.sucursal as Sucursal;
+    }
+
+    if (filters.marcaEquipo) {
+      where.marcaEquipo = filters.marcaEquipo;
     }
 
     if (filters.fechaDesde || filters.fechaHasta) {

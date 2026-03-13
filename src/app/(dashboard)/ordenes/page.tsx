@@ -17,6 +17,8 @@ import {
   type Sucursal,
 } from "@/types/ordenes";
 import { Plus, Search, Eye, ChevronLeft, ChevronRight, Filter, X, Users } from "lucide-react";
+import { SUCURSAL_LABELS } from "@/lib/constants/labels";
+import { MARCA_OPTIONS } from "@/lib/constants/equipment";
 
 const TIPO_SERVICIO_OPTIONS: { value: TipoServicio | ""; label: string }[] = [
   { value: "", label: "Todos los tipos" },
@@ -103,6 +105,10 @@ export default function OrdenesPage() {
   const [estado, setEstado] = useState<EstadoOrden | "">("");
   const [semaforo, setSemaforo] = useState<SemaforoColor | "">("");
   const [tecnicoId, setTecnicoId] = useState("");
+  const [sucursal, setSucursal] = useState("");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
+  const [marcaEquipo, setMarcaEquipo] = useState("");
   const [tecnicos, setTecnicos] = useState<{ id: string; name: string }[]>([]);
 
   // Paginación
@@ -142,6 +148,10 @@ export default function OrdenesPage() {
       if (semaforo) params.set("semaforo", semaforo);
       if (clienteId) params.set("clienteId", clienteId);
       if (tecnicoId) params.set("tecnicoId", tecnicoId);
+      if (sucursal) params.set("sucursal", sucursal);
+      if (fechaDesde) params.set("fechaDesde", fechaDesde);
+      if (fechaHasta) params.set("fechaHasta", fechaHasta);
+      if (marcaEquipo) params.set("marcaEquipo", marcaEquipo);
 
       const response = await fetch(`/api/ordenes?${params.toString()}`);
 
@@ -158,7 +168,7 @@ export default function OrdenesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, tipoServicio, estado, semaforo, clienteId, tecnicoId]);
+  }, [page, search, tipoServicio, estado, semaforo, clienteId, tecnicoId, sucursal, fechaDesde, fechaHasta, marcaEquipo]);
 
   useEffect(() => {
     fetchOrdenes();
@@ -295,6 +305,71 @@ export default function OrdenesPage() {
             </div>
           </div>
         </div>
+
+        {/* Segunda fila de filtros: Sucursal, Marca, Fechas */}
+        <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col lg:flex-row gap-2 lg:gap-4">
+          {/* Sucursal */}
+          <select
+            value={sucursal}
+            onChange={(e) => {
+              setSucursal(e.target.value);
+              setPage(1);
+            }}
+            className="flex-1 min-w-[130px] lg:flex-none px-3 lg:px-4 py-3 lg:py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
+          >
+            <option value="">Todas las sucursales</option>
+            {(["MEXICALTZINGO", "LA_PAZ", "ABASTOS", "DOMICILIO"] as Sucursal[]).map((suc) => (
+              <option key={suc} value={suc}>
+                {SUCURSAL_LABELS[suc]}
+              </option>
+            ))}
+          </select>
+
+          {/* Marca */}
+          <select
+            value={marcaEquipo}
+            onChange={(e) => {
+              setMarcaEquipo(e.target.value);
+              setPage(1);
+            }}
+            className="flex-1 min-w-[130px] lg:flex-none px-3 lg:px-4 py-3 lg:py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
+          >
+            <option value="">Todas las marcas</option>
+            {MARCA_OPTIONS.filter((m) => m !== "Otro").map((marca) => (
+              <option key={marca} value={marca}>
+                {marca}
+              </option>
+            ))}
+          </select>
+
+          {/* Fechas */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500 whitespace-nowrap">Desde</label>
+              <input
+                type="date"
+                value={fechaDesde}
+                onChange={(e) => {
+                  setFechaDesde(e.target.value);
+                  setPage(1);
+                }}
+                className="min-w-[140px] px-3 lg:px-4 py-3 lg:py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500 whitespace-nowrap">Hasta</label>
+              <input
+                type="date"
+                value={fechaHasta}
+                onChange={(e) => {
+                  setFechaHasta(e.target.value);
+                  setPage(1);
+                }}
+                className="min-w-[140px] px-3 lg:px-4 py-3 lg:py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#31A7D4] focus:border-transparent"
+              />
+            </div>
+          </div>
+        </div>
       </Card>
 
       {/* Filter banner for clienteId */}
@@ -336,7 +411,7 @@ export default function OrdenesPage() {
         ) : ordenes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-500">
             <p>No se encontraron órdenes</p>
-            {(search || tipoServicio || estado || semaforo || tecnicoId) && (
+            {(search || tipoServicio || estado || semaforo || tecnicoId || sucursal || fechaDesde || fechaHasta || marcaEquipo) && (
               <Button
                 variant="ghost"
                 onClick={() => {
@@ -345,6 +420,10 @@ export default function OrdenesPage() {
                   setEstado("");
                   setSemaforo("");
                   setTecnicoId("");
+                  setSucursal("");
+                  setFechaDesde("");
+                  setFechaHasta("");
+                  setMarcaEquipo("");
                 }}
                 className="mt-2"
               >

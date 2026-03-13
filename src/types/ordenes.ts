@@ -100,6 +100,8 @@ export interface OrdenesFilters {
   semaforo?: SemaforoColor;
   fechaDesde?: string;
   fechaHasta?: string;
+  sucursal?: string;
+  marcaEquipo?: string;
   page?: number;
   pageSize?: number;
 }
