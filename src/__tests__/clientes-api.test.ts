@@ -1,4 +1,31 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
+
+vi.mock("@/lib/auth/auth", () => ({
+  auth: vi.fn(),
+}));
+
+vi.mock("@/lib/db/prisma", () => ({
+  default: {
+    cliente: {
+      findUnique: vi.fn(),
+      update: vi.fn(),
+    },
+  },
+}));
+
+import { UpdateClienteSchema } from "@/lib/validators/clientes";
+import { PATCH as patchCliente } from "@/app/api/clientes/[id]/route";
+import { auth } from "@/lib/auth/auth";
+import prisma from "@/lib/db/prisma";
+
+const mockAuth = auth as ReturnType<typeof vi.fn>;
+const mockPrisma = prisma as unknown as {
+  cliente: {
+    findUnique: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+  };
+};
 
 /**
  * Tests para validación de datos de clientes
@@ -173,15 +200,33 @@ describe("UpdateClienteInput Validación", () => {
       expect(input.email).toBe("nuevo@email.com");
     });
 
-    it("permite limpiar campos opcionales con null", () => {
-      const input: UpdateClienteInput = {
+    it("acepta null en todos los campos opcionales en runtime", () => {
+      const input = {
+        nombre: "CESAR ARTEAGA",
+        telefono: "3317698795",
         empresa: null,
         email: null,
+        direccion: "OCAMPO 163",
+        ciudad: "ZAPOPAN",
+        esDistribuidor: false,
+        codigoDistribuidor: null,
         notas: null,
       };
-      expect(input.empresa).toBeNull();
-      expect(input.email).toBeNull();
-      expect(input.notas).toBeNull();
+      const result = UpdateClienteSchema.safeParse(input);
+      expect(result.success).toBe(true);
+    });
+
+    it("acepta string vacío en email y lo transforma a null", () => {
+      const result = UpdateClienteSchema.safeParse({ email: "" });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.email).toBeNull();
+      }
+    });
+
+    it("rechaza email con formato inválido", () => {
+      const result = UpdateClienteSchema.safeParse({ email: "no-es-email" });
+      expect(result.success).toBe(false);
     });
   });
 
@@ -413,5 +458,67 @@ describe("Validación de campos", () => {
       expect(nombre.includes("'")).toBe(true);
       expect(nombre.includes("&")).toBe(true);
     });
+  });
+});
+
+describe("PATCH /api/clientes/[id] RBAC", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function patchRequest(body: object): NextRequest {
+    return new NextRequest(new URL("http://localhost:3000/api/clientes/cliente-1"), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  function patchParams(): { params: Promise<{ id: string }> } {
+    return { params: Promise.resolve({ id: "cliente-1" }) };
+  }
+
+  it("TECNICO recibe 403 al intentar editar cliente", async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: "tecnico-1", name: "Técnico", role: "TECNICO" },
+    });
+
+    const response = await patchCliente(
+      patchRequest({ nombre: "Nuevo Nombre" }),
+      patchParams()
+    );
+
+    expect(response.status).toBe(403);
+    expect(mockPrisma.cliente.findUnique).not.toHaveBeenCalled();
+    expect(mockPrisma.cliente.update).not.toHaveBeenCalled();
+  });
+
+  it("VENDEDOR puede editar cliente (rol permitido)", async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: "vendedor-1", name: "Vendedor", role: "VENDEDOR" },
+    });
+    mockPrisma.cliente.findUnique.mockResolvedValue({ id: "cliente-1" });
+    mockPrisma.cliente.update.mockResolvedValue({
+      id: "cliente-1",
+      nombre: "CESAR ARTEAGA",
+    });
+
+    const response = await patchCliente(
+      patchRequest({ nombre: "CESAR ARTEAGA", email: null }),
+      patchParams()
+    );
+
+    expect(response.status).toBe(200);
+  });
+
+  it("Sin sesión recibe 401", async () => {
+    mockAuth.mockResolvedValue(null);
+
+    const response = await patchCliente(
+      patchRequest({ nombre: "Nuevo Nombre" }),
+      patchParams()
+    );
+
+    expect(response.status).toBe(401);
   });
 });

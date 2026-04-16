@@ -72,6 +72,14 @@ export async function PATCH(
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
+    const allowedRoles = ["SUPER_ADMIN", "COORD_SERVICIO", "VENDEDOR"];
+    if (!allowedRoles.includes(session.user.role as string)) {
+      return NextResponse.json(
+        { error: "No tienes permisos para editar clientes" },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const rawBody = await request.json();
     const parsed = UpdateClienteSchema.safeParse(rawBody);

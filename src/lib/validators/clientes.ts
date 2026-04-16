@@ -12,10 +12,8 @@ export const CreateClienteSchema = z.object({
     .min(8, "El teléfono debe tener al menos 8 caracteres")
     .max(20, "El teléfono no puede exceder 20 caracteres"),
   email: z
-    .string()
-    .email("Email inválido")
+    .union([z.string().email("Email inválido"), z.literal(""), z.null()])
     .optional()
-    .or(z.literal(""))
     .transform((val) => val || undefined),
   empresa: z.string().max(200, "La empresa no puede exceder 200 caracteres").optional(),
   direccion: z.string().max(500, "La dirección no puede exceder 500 caracteres").optional(),
@@ -34,10 +32,8 @@ export const UpdateClienteSchema = z
     nombre: z.string().min(1, "El nombre es requerido").max(200, "El nombre no puede exceder 200 caracteres").optional(),
     telefono: z.string().min(8, "El teléfono debe tener al menos 8 caracteres").max(20, "El teléfono no puede exceder 20 caracteres").optional(),
     email: z
-      .string()
-      .email("Email inválido")
+      .union([z.string().email("Email inválido"), z.literal(""), z.null()])
       .optional()
-      .or(z.literal(""))
       .transform((val) => val || null),
     empresa: z.string().max(200, "La empresa no puede exceder 200 caracteres").optional().nullable(),
     direccion: z.string().max(500, "La dirección no puede exceder 500 caracteres").optional().nullable(),

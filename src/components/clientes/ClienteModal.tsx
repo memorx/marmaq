@@ -120,6 +120,15 @@ export function ClienteModal({ isOpen, onClose, onSave, cliente }: ClienteModalP
 
       if (!res.ok) {
         const data = await res.json();
+        if (data.details && typeof data.details === "object") {
+          const firstFieldError = Object.entries(data.details).find(
+            ([, errors]) => Array.isArray(errors) && errors.length > 0
+          );
+          if (firstFieldError) {
+            const [field, errors] = firstFieldError;
+            throw new Error(`${field}: ${(errors as string[])[0]}`);
+          }
+        }
         throw new Error(data.error || "Error al guardar cliente");
       }
 
