@@ -51,3 +51,6 @@ public/fallback-*.js
 tmpclaude-*
 
 .vercel
+
+# Windows: archivo creado accidentalmente al redirigir output con `> nul` en PowerShell
+/nul
